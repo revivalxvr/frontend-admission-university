@@ -1,16 +1,34 @@
-// app/components/pages/AdminSidebar.tsx
 'use client'; 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const AdminSidebar = () => {
   const pathname = usePathname();
+  
+  // 1. Buat state untuk menandai apakah sudah masuk ke browser (client)
+  const [isClient, setIsClient] = useState(false);
+
+  // 2. Set menjadi true setelah komponen sukses ter-mount di browser
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const isActive = (href: string) => {
     return pathname === href;
   };
 
+  // 3. Jika belum di client (masih fase server), render kerangka kosong 
+  // agar tidak tabrakan dengan manipulasi class dari template Stisla
+  if (!isClient) {
+    return (
+      <div className="main-sidebar sidebar-style-2">
+        <aside id="sidebar-wrapper" />
+      </div>
+    );
+  }
+
+  // 4. Jika sudah di client, render menu lengkap secara aman
   return (
     <div className="main-sidebar sidebar-style-2">
       <aside id="sidebar-wrapper">
@@ -45,12 +63,6 @@ const AdminSidebar = () => {
               <span>Tahun Ajaran</span>
             </Link>
           </li>
-          {/* <li className={isActive('/pages/admin/kelas') ? 'active' : ''}>
-            <Link className="nav-link" href="/pages/admin/kelas">
-              <i className="ion-ios-bookmarks"></i>
-              <span>Kelas</span>
-            </Link>
-          </li> */}
           <li className={isActive('/pages/admin/users') ? 'active' : ''}>
             <Link className="nav-link" href="/pages/admin/users">
               <i className="ion-ios-bookmarks"></i>

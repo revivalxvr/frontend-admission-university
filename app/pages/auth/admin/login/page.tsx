@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import api from "@/app/lib/axiosInstance";
+import Cookies from "js-cookie";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -8,15 +10,20 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState("");
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
 
 
-        //simulasi login sederhana, ganti dengan API call ke backend
-       if (email === "admin@gmail.com" && password === "password") {
-            router.push("/admin/dashboard");
-        } else {
-            alert("Login gagal, coba lagi!");
+        try {
+            const response = await api.post("/authsiakad/login", {
+                email,
+                password,
+            });
+            Cookies.set("token", response.data.data.token, {expires: 1});
+            Cookies.set("email", response.data.data.email, {expires: 1});
+            router.push("/pages/admin/dashboard");
+        } catch (error) {
+            console.error("Login failed:", error);
         }
     };
 
@@ -31,7 +38,7 @@ export default function LoginPage() {
                         <div className="card card-primary">
                         <div className="card-header"><h4>Login Admin</h4></div>
                         <div className="card-body">
-                            <form onSubmit={handleSubmit} className="needs-validation" noValidate>
+                            <form onSubmit={handleLogin} className="needs-validation" noValidate>
                             <div className="form-group">
                                 <label htmlFor="email">Email</label>
                                 <input  id="email" 

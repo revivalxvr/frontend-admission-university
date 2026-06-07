@@ -1,7 +1,25 @@
 // app/components/AdminNavbar.tsx
+"use client";
 import React from 'react';
-
+import Cookies from 'js-cookie';
+import { useRouter, } from 'next/navigation';
+import { useState, useEffect } from 'react';
 const AdminNavbar = () => {
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState("");
+  useEffect(() => {
+    const emailFromCookie = Cookies.get("email");
+    if (emailFromCookie) {
+      setUserEmail(emailFromCookie);
+    }
+  }, []);
+  
+   const handleLogout = () => {
+    Object.keys(Cookies.get()).forEach(cookie => {
+      Cookies.remove(cookie);
+    });
+    router.push("/pages/auth/admin/login");
+  }
   return (
     <nav className="navbar navbar-expand-lg main-navbar">
       <form className="form-inline mr-auto">
@@ -14,7 +32,7 @@ const AdminNavbar = () => {
         <li className="dropdown">
           <a href="#" data-toggle="dropdown" className="nav-link dropdown-toggle nav-link-lg nav-link-user">
             <img alt="image" src="../../assets/img/avatar/avatar-1.png" className="rounded-circle mr-1" />
-            <div className="d-sm-none d-lg-inline-block">Hi, Ujang Maman</div>
+            <div className="d-sm-none d-lg-inline-block">Hi, {userEmail}</div>
           </a>
           <div className="dropdown-menu dropdown-menu-right">
             <div className="dropdown-title">Logged in 5 min ago</div>
@@ -28,7 +46,12 @@ const AdminNavbar = () => {
               <i className="fas fa-cog"></i> Settings
             </a>
             <div className="dropdown-divider"></div>
-            <a href="#" className="dropdown-item has-icon text-danger">
+            <a href="#" 
+            className="dropdown-item has-icon text-danger" 
+            onClick= {(e) => 
+              {e.preventDefault();
+              handleLogout()
+              }}>
               <i className="fas fa-sign-out-alt"></i> Logout
             </a>
           </div>

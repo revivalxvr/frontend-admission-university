@@ -1,8 +1,7 @@
 "use client";
-
-
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation';
+import api from "@/app/lib/axiosInstance";
 
 export default function RegisterPage() {
      const router = useRouter();
@@ -12,19 +11,26 @@ export default function RegisterPage() {
     const[password, setPassword] = useState("");
     const [role, setRole] = useState("");
 
-   const handleSubmit = async (e: React.FormEvent) => {
+   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
         if (!name || !email || !password ) {
             alert("Please fill in all fields");
             return;
         }
-        //simulasi kirim data ke backend
-        console.log({ name, email, password, role });
-        
-       
-        //redirect ke halaman login
-        router.push("/admin/login");
+       try {
+            const response = await api.post("/authsiakad/register", {
+                name,
+                email,
+                password,
+                role: "admin"
+            });
+            alert("Registration successful! Please login.");
+            router.push("/pages/auth/admin/login");
+       }
+        catch (error) {
+            console.error("Registration failed:", error);
+        }
    }
   return (
         <section className="section">
@@ -37,7 +43,7 @@ export default function RegisterPage() {
                 <div className="card card-primary">
                 <div className="card-header"><h4>Register</h4></div>
                 <div className="card-body">
-                    <form onSubmit={handleSubmit}>
+                    <form onSubmit={handleRegister}>
                     <div className="row">
                         <div className="form-group col-6">
                         <label htmlFor="name">Name</label>

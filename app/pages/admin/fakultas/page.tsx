@@ -58,15 +58,6 @@ const FakultasPage = () => {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
 
-  //State search, sorting, pagination
-  // const [globalFilter, setGlobalFilter] = useState('');
-  // const [sorting, setSorting] = useState<SortingState>([
-  //   {id: 'name', desc: false},
-  // ]);
-  // const [pagination, setPagination] = useState({
-  //   pageIndex: 0,
-  //   pageSize: 10
-  // })
 
   //Generate code otomatis dari nama
   const generateCode = (nameFakultas: string) => {
@@ -127,20 +118,19 @@ const FakultasPage = () => {
     }
   };
 
-  const handleSave = async () => {
-    if (selectedFaculties) {
-      await updateFacultas(selectedFaculties.id, {
-        name: selectedFaculties.name,
-        code: selectedFaculties.code,
-      });
-      closeEditModal();
-      fetchFakultas();
-    }
-  };
+  // const handleSave = async () => {
+  //   if (selectedFaculties) {
+  //     await updateFacultas(selectedFaculties.id, {
+  //       name: selectedFaculties.name,
+  //       code: selectedFaculties.code,
+  //     });
+  //     closeEditModal();
+  //     fetchFakultas();
+  //   }
+  // };
   //hapus
   const handleDelete = async (id: number) => {
     if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
-
     try {
       await deleteFacultas(id);
       setFaculties(faculties.filter((fakultas) => fakultas.id !== id));
@@ -296,7 +286,7 @@ const FakultasPage = () => {
                   >
                     <div className="modal-dialog modal-dialog-centered">
                       <div className="modal-content">
-                        <form onSubmit={handleSave}>
+                        <form onSubmit={handleEditSubmit}>
                           <div className="modal-header">
                             <h5 className="modal-title">Edit Fakultas</h5>
                             <button
@@ -313,14 +303,16 @@ const FakultasPage = () => {
                               <input
                                 type="text"
                                 className="form-control"
-                                name="nama"
+                                name="name"
                                 value={selectedFaculties?.name || ""}
                                 onChange={(e) => {
                                   // Cek dulu apakah selectedFaculties ada isinya (tidak null)
                                   if (selectedFaculties) {
+                                    const newName = e.target.value;
                                     setSelectedFaculties({
                                       ...selectedFaculties, // Taruh spread di ATAS
-                                      name: e.target.value, // Properti yang diubah di BAWAH
+                                     name: newName,
+                                      code: generateCode(newName),
                                     });
                                   }
                                 }}
@@ -332,7 +324,7 @@ const FakultasPage = () => {
                               <input
                                 type="text"
                                 className="form-control"
-                                name="kode"
+                                name="code"
                                 value={selectedFaculties?.code || ""}
                                 onChange={(e) => {
                                   if (selectedFaculties) {

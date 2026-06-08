@@ -1,35 +1,104 @@
 'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '@/app/lib/axiosInstance';
 
 interface TahunAjaran {
-  id: number;
-  nama: string;
-  tanggalMulai: string;
-  tanggalBerakhir: string;
-  isAktif: boolean;
+  id?: number; //bisa undifined saat pertama kali di tambahkan jadi "?"
+  name: string;
+  dateStart: string;
+  dateEnd: string;
+  status: boolean;
   createdAt: string;
 }
 
 const TahunAjaranPage = () => {
-  const [data, setData] = useState<TahunAjaran[]>([
-    {
-      id: 1,
-      nama: '2025/2026',
-      tanggalMulai: 'Senin, 06 Januari 2025',
-      tanggalBerakhir: 'Senin, 30 Juni 2025',
-      isAktif: true,
-      createdAt: 'Rabu, 15 Januari 2025',
-    },
-  ]);
-
+  const [data, setData] = useState<TahunAjaran[]>([]);
+  const [newTahun, setNewTahun] = useState<TahunAjaran>({
+    name: "",
+    dateStart: "",
+    dateEnd: "",
+    status: false,
+    createdAt: "",
+  })
   const [selectedEdit, setSelectedEdit] = useState<TahunAjaran | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  //API services CRUD
+ const fetchData = async () => {
+   try {
+      const res = await api.get('/years');
+      setData(res.data.data);
+   } catch (error) {
+    console.log("Gagal Fetching data tahun ajaran ==",error);
+   }
+ }
+
+ const addYear = async (e: React.FormEvent) => {
+   e.preventDefault();
+
+   //tambahkan sementara di UI dengan temporary id
+   const tempId = Date.now();
+   const tempData = { ...newTahun, id: tempId, createdAt: new Date().toLocaleDateString("id-ID"), 
+   };
+   setData((prev) => [...prev, tempData]);
+  
+   try {
+   const res = await api.post('/years', newTahun);
+    setData((prev) => prev.map((item) => (item.id === tempId ? res.data.data : item)));
+    
+    // Reset form jadi kosong (yang kita buat sebelumnya)
+    setNewTahun({ name: "", dateStart: "", dateEnd: "", status: false, createdAt: "" });
+    
+  
+  
+
+    // === TAMBAHKAN KODE INI UNTUK MEMAKSA BOOTSTRAP MENUTUP FORM ===
+    // setShowAddForm(false);
+    // if (typeof window !== "undefined" && (window as any).$) {
+    //   (window as any).$('#collapseTambahTahunAjaran').collapse('hide');
+    // }
+   } catch (error) {
+    console.log("Gagal menambah data tahun ajaran ==",error);
+   }
+ }
 
   const handleEdit = (item: TahunAjaran) => {
-    setSelectedEdit(item);
+    setSelectedEdit({
+      ...item,
+      dateStart: item.dateStart ? item.dateStart.split('T')[0] : "",
+      dateEnd: item.dateEnd ? item.dateEnd.split('T')[0] : "",
+    });
     setShowEditModal(true);
   };
+
+
+  const saveEdit = async (e:React.FormEvent) =>{
+    e.preventDefault();
+    if (!selectedEdit || selectedEdit.id === undefined) return;
+    try {
+      const res = await api.put(`/years/${selectedEdit.id}`, selectedEdit);
+      setData((prev) => prev.map((item) => (item.id === selectedEdit?.id ? res.data.data : item)));
+      setShowEditModal(false);
+      setSelectedEdit(null);
+    } catch (error) {
+      console.log("Gagal menyimpan perubahan tahun ajaran ==",error);
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!id ) return;
+    if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
+    try {
+      await api.delete(`/years/${id}`);
+      setData((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+     console.log("Gagal menghapus data tahun ajaran ==",err);
+    }
+  }
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <section className="section">
@@ -57,19 +126,22 @@ const TahunAjaranPage = () => {
                   type="button"
                   data-toggle="collapse"
                   data-target="#collapseTambahTahunAjaran"
+                  onClick={() => setShowAddForm(!showAddForm)}
                 >
                   Tambah Tahun Ajaran
                 </button>
 
                 <div className="collapse" id="collapseTambahTahunAjaran">
                   <div className="card card-body">
-                    <form>
+                    <form onSubmit={addYear}>
                       <div className="form-group">
                         <label>Nama Tahun Ajaran</label>
                         <input
                           type="text"
                           className="form-control"
                           placeholder="Nama Tahun Ajaran"
+                          value={newTahun.name}
+                          onChange={(e) => setNewTahun({...newTahun, name: e.target.value})}
                         />
                       </div>
                       <div className="form-group">
@@ -78,6 +150,8 @@ const TahunAjaranPage = () => {
                           type="date"
                           className="form-control"
                           name="tanggal_mulai"
+                          value = {newTahun.dateStart}
+                          onChange = {(e) => setNewTahun({...newTahun, dateStart: e.target.value})}
                           required
                         />
                       </div>
@@ -87,18 +161,22 @@ const TahunAjaranPage = () => {
                           type="date"
                           className="form-control"
                           name="tanggal_berakhir"
+                          value={newTahun.dateEnd}
+                          onChange = {(e) => setNewTahun({...newTahun, dateEnd: e.target.value})}
                           required
                         />
                       </div>
                       <div className="form-group">
                         <label>Apakah Aktif</label>
                         <br />
-                        <div className="custom-control custom-switch">
+                        <div className="custom-control custom-checkbox">
                           <input
                             type="checkbox"
                             className="custom-control-input"
                             id="isAktif"
                             name="is_aktif"
+                            checked={newTahun.status}
+                            onChange={(e) => setNewTahun({...newTahun, status: e.target.checked})}
                           />
                           <label
                             className="custom-control-label"
@@ -130,17 +208,35 @@ const TahunAjaranPage = () => {
                     </thead>
                     <tbody>
                       {data.map((item, index) => (
-                        <tr key={item.id}>
+                        <tr key={item.id ?? `new-${index}`}>
                           <td>{index + 1}</td>
-                          <td>{item.nama}</td>
-                          <td>{item.tanggalMulai}</td>
-                          <td>{item.tanggalBerakhir}</td>
+                          <td>{item.name}</td>
+                          <td>{
+                              new Date(item.dateStart ?? "").toLocaleDateString("id-ID", {
+                                day: "2-digit",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            }</td>
+                          <td>{
+                              new Date(item.dateEnd ?? "").toLocaleDateString("id-ID", {
+                                day: "2-digit",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            }</td>
                           <td>
-                            <span className={`badge ${item.isAktif ? 'badge-success' : 'badge-secondary'}`}>
-                              {item.isAktif ? 'Aktif' : 'Tidak'}
+                            <span className={`badge ${item.status ? 'badge-success' : 'badge-danger'}`}>
+                              {item.status ? 'Aktif' : 'Tidak'}
                             </span>
                           </td>
-                          <td>{item.createdAt}</td>
+                          <td>{
+                              new Date(item.createdAt ?? "").toLocaleDateString("id-ID", {
+                                day: "2-digit",
+                                month: "long",
+                                year: "numeric",
+                              })
+                            }</td>
                           <td>
                             <button
                               onClick={() => handleEdit(item)}
@@ -148,7 +244,8 @@ const TahunAjaranPage = () => {
                             >
                               <i className="far fa-edit"></i>
                             </button>
-                            <button className="btn btn-icon btn-danger">
+                            <button className="btn btn-icon btn-danger"
+                              onClick={() => handleDelete(item.id!)}>
                               <i className="fa fa-trash"></i>
                             </button>
                           </td>
@@ -171,6 +268,7 @@ const TahunAjaranPage = () => {
                       role="document"
                     >
                       <div className="modal-content">
+                        <form onSubmit = {saveEdit}>
                         <div className="modal-header">
                           <h5 className="modal-title">Edit Tahun Ajaran</h5>
                           <button
@@ -182,13 +280,15 @@ const TahunAjaranPage = () => {
                           </button>
                         </div>
                         <div className="modal-body">
-                          <form>
+            
                             <div className="form-group">
                               <label>Nama Tahun Ajaran</label>
                               <input
                                 type="text"
                                 className="form-control"
-                                defaultValue={selectedEdit.nama}
+                                defaultValue={selectedEdit.name}
+                                onChange={(e) => setSelectedEdit({...selectedEdit, name: e.target.value})}
+                                required
                               />
                             </div>
                             <div className="form-group">
@@ -196,7 +296,9 @@ const TahunAjaranPage = () => {
                               <input
                                 type="date"
                                 className="form-control"
-                                defaultValue={selectedEdit.tanggalMulai}
+                                value={selectedEdit.dateStart}
+                                onChange={(e) => setSelectedEdit({...selectedEdit, dateStart: e.target.value})}
+                                required
                               />
                             </div>
                             <div className="form-group">
@@ -204,18 +306,22 @@ const TahunAjaranPage = () => {
                               <input
                                 type="date"
                                 className="form-control"
-                                defaultValue={selectedEdit.tanggalBerakhir}
+                                value={selectedEdit.dateEnd}
+                                onChange={(e) => setSelectedEdit({...selectedEdit, dateEnd: e.target.value})}
+                                required
                               />
                             </div>
                             <div className="form-group">
                               <label>Status Aktif</label>
                               <br />
-                              <div className="custom-control custom-switch">
+                              <div className="custom-control custom-checkbox">
                                 <input
                                   type="checkbox"
                                   className="custom-control-input"
                                   id="editIsAktif"
-                                  defaultChecked={selectedEdit.isAktif}
+                                  defaultChecked={selectedEdit.status}
+                                  onChange={(e) => setSelectedEdit({...selectedEdit, status: e.target.checked})}
+                                 
                                 />
                                 <label
                                   className="custom-control-label"
@@ -225,7 +331,7 @@ const TahunAjaranPage = () => {
                                 </label>
                               </div>
                             </div>
-                          </form>
+                        
                         </div>
                         <div className="modal-footer">
                           <button
@@ -239,6 +345,7 @@ const TahunAjaranPage = () => {
                             Simpan Perubahan
                           </button>
                         </div>
+                          </form>
                       </div>
                     </div>
                   </div>

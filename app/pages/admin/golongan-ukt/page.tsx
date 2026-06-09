@@ -274,7 +274,7 @@ const handleAddNewGolUkt = async (e: React.FormEvent<HTMLFormElement>) => {
                                 name="group"
                                 value={selectedGolUkt?.group || ""}
                                 onChange={(e) => {
-                                  // Cek dulu apakah selectedFaculties ada isinya (tidak null)
+                                  // Cek dulu apakah selectedGolUkt ada isinya (tidak null)
                                   if (selectedGolUkt) {
                                     const newName = e.target.value;
                                     setSelectedGolUkt({
@@ -298,7 +298,7 @@ const handleAddNewGolUkt = async (e: React.FormEvent<HTMLFormElement>) => {
                                     setSelectedGolUkt({
                                       ...selectedGolUkt,
                                       amount: Number(e.target.value),
-                                      
+
                                     });
                                   }
                                 }}

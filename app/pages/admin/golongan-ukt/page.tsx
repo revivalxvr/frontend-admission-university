@@ -96,7 +96,7 @@ const handleAddNewGolUkt = async (e: React.FormEvent<HTMLFormElement>) => {
     }
      const saved = await addGolUkt(playload);
       setGolUktList((prev) => [...prev, saved]);
-      setNewGolUkt({ group: "", amount: null });
+      setNewGolUkt({ group: " " , amount: null });
       fetchData();
   } catch (error) {
     console.log ("Gagal menambahkan Golongan UKT ==",error);
@@ -126,6 +126,7 @@ const handleAddNewGolUkt = async (e: React.FormEvent<HTMLFormElement>) => {
       }
 
       console.error("====Gagal delete golongan UKT ===", errorString);
+      console.error("====Gagal delete golongan UKT ===", errorData);
 
     }
    }
@@ -170,6 +171,7 @@ const handleAddNewGolUkt = async (e: React.FormEvent<HTMLFormElement>) => {
                           className="form-control"
                           placeholder="Nama Golongan"
                           name="group"
+                          value={newGolUkt.group}
                           onChange={handleNewGolUktChange}
                           required
                         />
@@ -272,7 +274,7 @@ const handleAddNewGolUkt = async (e: React.FormEvent<HTMLFormElement>) => {
                                 type="text"
                                 className="form-control"
                                 name="group"
-                                value={selectedGolUkt?.group || ""}
+                                value={selectedGolUkt?.group}
                                 onChange={(e) => {
                                   // Cek dulu apakah selectedGolUkt ada isinya (tidak null)
                                   if (selectedGolUkt) {

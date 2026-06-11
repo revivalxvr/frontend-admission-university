@@ -143,18 +143,31 @@ const ProdiPage = () => {
       setProdiList((prev) => prev.filter((prodi) => prodi.id !== id));
       alert("Data prodi berhasil dihapus!");
       fetchProdis();
-    } catch (error : any) {
-      //cek error nya apakah karena  forekey constraint
-      const errorData = error.response?.data;
-      //cek apa pesan error apa yang di kirim dari backend contoh {"code": "P2003", "message": "Foreign key violation"}
-      const errorString = JSON.stringify(errorData || "").toLowerCase();
-     if (errorData?.code === "P2003") {
-        alert(
-          "Tidak dapat menghapus data karena masih terhubung dengan data lain",
-        );
-      console.log("Gagal menghapus prodi ==", errorString);
-    }
-  };
+    } catch (err : any) {
+      console.error("Gagal delete fakultas:", err);
+
+  const errorData = err.response?.data;
+  const errorStatus = err.response?.status; // Mengambil status code (misal: 500)
+  const errorString = JSON.stringify(errorData || "").toLowerCase();
+
+  // 1. Cek jika disebabkan oleh Foreign Key Constraint (Prisma P2003)
+  if (
+    errorData?.code === "P2003" || 
+    errorString.includes("foreign key") ||
+    errorString.includes("constraint")
+  ) {
+    alert("Tidak dapat menghapus data karena masih terhubung dengan data lain");
+  } 
+  // 2. Jaring pengaman jika backend crash / Error 500
+  else if (errorStatus === 500) {
+    alert("Terjadi kesalahan pada server (Internal Server Error 500). Mohon periksa log backend Anda.");
+  } 
+  // 3. Error umum lainnya
+  else {
+    const pesanError = errorData?.message || err.message || "Unknown error";
+    alert("Terjadi kesalahan saat menghapus data: " + pesanError);
+  }
+  }
 }
 
   return (

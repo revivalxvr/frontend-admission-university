@@ -266,15 +266,18 @@ const UKTPage = () => {
                       </div>
                       <div className="form-group">
                         <label>Status</label>
-                        <input
-                          type="text"
+                        <select
                           className="form-control"
+                          id="status"
                           name="status"
                           value={newUkt.status}
                           onChange={handleNewChange}
                           required
-                          placeholder="Status"
-                        />
+                          >
+                          <option value="">-- Pilih Status --</option>
+                          <option value="Lunas">Lunas</option>
+                          <option value="Belum Lunas">Belum Lunas</option>
+                        </select>
                       </div>
                       <button type="submit" className="btn btn-primary">
                         Simpan
@@ -384,32 +387,29 @@ const UKTPage = () => {
               <div className="modal-body">
                 <form onSubmit={handleSave}>
                   <div className="form-group">
-                    <label htmlFor="name">Nama</label>
-                    <select
+                    <label htmlFor="name">Nama Mahasiswa</label>
+                    <input
                       className="form-control"
                       id="name"
-                      name="studentId"
-                      value={selectedUkt.studentId}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">-- Pilih Mahasiswa --</option>
-                      {mahasiswaList.map((mhs) => (
-                        <option key={mhs.id} value={mhs.id}>
-                          {mhs.name}
-                        </option>
-                      ))}
-                    </select>
+                      value={selectedUkt.student?.name}
+                      readOnly
+                   />
                   </div>
                   <div className="form-group">
                     <label>Status</label>
-                    <input
-                      type="text"
+                    <select
                       className="form-control"
                       name="status"
                       value={selectedUkt.status}
                       onChange={handleInputChange}
-                    />
+                      required
+                    > 
+                        <option value="">-- Pilih Status --</option>
+                        <option value="Lunas">Lunas</option>
+                        <option value="Belum Lunas">Belum Lunas</option>
+                    </select>
+                   
+                   
                   </div>
                   <div className="modal-footer">
                     <button

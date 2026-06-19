@@ -142,7 +142,7 @@ const MatkulPage = () => {
       setMatkulList((prev) =>
         prev.map((matkul) => (matkul.id === res.id ? res : matkul)),
       );
-      closeEditModal();
+     
       fetchMatkul();
     } catch (error) {
       console.log("Gagal mengupdate matkul ==", error);

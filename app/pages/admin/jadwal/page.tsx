@@ -121,7 +121,6 @@ const JadwalPage = () => {
         classId: "",
         courseId: "",
       });
-      closeEditModal();
       fetchJadwal();
     } catch (error) {
       console.log("Gagal menambahkan jadwal ==", error);
@@ -464,7 +463,7 @@ const JadwalPage = () => {
             <div className="modal-content">
               <form onSubmit={handleSaveEdit}>
                 <div className="modal-header">
-                  <h5 className="modal-title">Edit Program Dosen</h5>
+                  <h5 className="modal-title">Edit Jadwal</h5>
                   <button
                     type="button"
                     className="close"

@@ -293,7 +293,7 @@ const MatkulPage = () => {
                           <td>{matkul.lecture?.name ?? "-"}</td>
                           <td>{matkul.code}</td>
                           <td>{matkul.name}</td>
-                          <td>{matkul.credits}</td>
+                          
                           <td>
                             {new Date(matkul.createdAt).toLocaleString(
                               "id-ID",

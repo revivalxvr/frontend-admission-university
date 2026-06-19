@@ -1,6 +1,6 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import api from '@/app/lib/axiosInstance';
+"use client";
+import React, { useState, useEffect } from "react";
+import api from "@/app/lib/axiosInstance";
 
 interface TahunAjaran {
   id?: number; //bisa undifined saat pertama kali di tambahkan jadi "?"
@@ -19,83 +19,105 @@ const TahunAjaranPage = () => {
     dateEnd: "",
     status: false,
     createdAt: "",
-  })
+  });
   const [selectedEdit, setSelectedEdit] = useState<TahunAjaran | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
 
   //API services CRUD
- const fetchData = async () => {
-   try {
-      const res = await api.get('/years');
+  const fetchData = async () => {
+    try {
+      const res = await api.get("/years");
       setData(res.data.data);
-   } catch (error) {
-    console.log("Gagal Fetching data tahun ajaran ==",error);
-   }
- }
+    } catch (error) {
+      console.log("Gagal Fetching data tahun ajaran ==", error);
+    }
+  };
 
- const addYear = async (e: React.FormEvent) => {
-   e.preventDefault();
+  const addYear = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-   //tambahkan sementara di UI dengan temporary id
-   const tempId = Date.now();
-   const tempData = { ...newTahun, id: tempId, createdAt: new Date().toLocaleDateString("id-ID"), 
-   };
-   setData((prev) => [...prev, tempData]);
-  
-   try {
-   const res = await api.post('/years', newTahun);
-    setData((prev) => prev.map((item) => (item.id === tempId ? res.data.data : item)));
-    
-    // Reset form jadi kosong (yang kita buat sebelumnya)
-    setNewTahun({ name: "", dateStart: "", dateEnd: "", status: false, createdAt: "" });
-    
-  
-  
+    //tambahkan sementara di UI dengan temporary id
+    const tempId = Date.now();
+    const tempData = {
+      ...newTahun,
+      id: tempId,
+      createdAt: new Date().toLocaleDateString("id-ID"),
+    };
+    setData((prev) => [...prev, tempData]);
 
-    // === TAMBAHKAN KODE INI UNTUK MEMAKSA BOOTSTRAP MENUTUP FORM ===
-    // setShowAddForm(false);
-    // if (typeof window !== "undefined" && (window as any).$) {
-    //   (window as any).$('#collapseTambahTahunAjaran').collapse('hide');
-    // }
-   } catch (error) {
-    console.log("Gagal menambah data tahun ajaran ==",error);
-   }
- }
+    try {
+      const res = await api.post("/years", newTahun);
+      setData((prev) =>
+        prev.map((item) => (item.id === tempId ? res.data.data : item)),
+      );
+
+      // Reset form jadi kosong (yang kita buat sebelumnya)
+      setNewTahun({
+        name: "",
+        dateStart: "",
+        dateEnd: "",
+        status: false,
+        createdAt: "",
+      });
+
+      // === TAMBAHKAN KODE INI UNTUK MEMAKSA BOOTSTRAP MENUTUP FORM ===
+      // setShowAddForm(false);
+      // if (typeof window !== "undefined" && (window as any).$) {
+      //   (window as any).$('#collapseTambahTahunAjaran').collapse('hide');
+      // }
+    } catch (error) {
+      console.log("Gagal menambah data tahun ajaran ==", error);
+    }
+  };
 
   const handleEdit = (item: TahunAjaran) => {
     setSelectedEdit({
       ...item,
-      dateStart: item.dateStart ? item.dateStart.split('T')[0] : "",
-      dateEnd: item.dateEnd ? item.dateEnd.split('T')[0] : "",
+      dateStart: item.dateStart ? item.dateStart.split("T")[0] : "",
+      dateEnd: item.dateEnd ? item.dateEnd.split("T")[0] : "",
     });
     setShowEditModal(true);
   };
 
-
-  const saveEdit = async (e:React.FormEvent) =>{
+  const saveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEdit || selectedEdit.id === undefined) return;
     try {
       const res = await api.put(`/years/${selectedEdit.id}`, selectedEdit);
-      setData((prev) => prev.map((item) => (item.id === selectedEdit?.id ? res.data.data : item)));
+      setData((prev) =>
+        prev.map((item) =>
+          item.id === selectedEdit?.id ? res.data.data : item,
+        ),
+      );
       setShowEditModal(false);
       setSelectedEdit(null);
     } catch (error) {
-      console.log("Gagal menyimpan perubahan tahun ajaran ==",error);
+      console.log("Gagal menyimpan perubahan tahun ajaran ==", error);
     }
-  }
+  };
 
   const handleDelete = async (id: number) => {
-    if (!id ) return;
+    if (!id) return;
     if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
     try {
       await api.delete(`/years/${id}`);
       setData((prev) => prev.filter((item) => item.id !== id));
-    } catch (err) {
-     console.log("Gagal menghapus data tahun ajaran ==",err);
+      alert("Data matkul berhasil dihapus!");
+    } catch (error: any) {
+      //cek error nya apakah karena  forekey constraint
+      const errorData = error.response?.data;
+      //cek apa pesan error apa yang di kirim dari backend contoh {"code": "P2003", "message": "Foreign key violation"}
+      const errorString = JSON.stringify(errorData || "").toLowerCase();
+      if (errorData?.code === "P2003") {
+        alert(
+          "Tidak dapat menghapus data karena masih terhubung dengan data lain",
+        );
+        console.log("Gagal menghapus matkul ==", errorString);
+        console.log("Gagal menghapus matkul ==", errorData);
+      }
     }
-  }
+  };
   useEffect(() => {
     fetchData();
   }, []);
@@ -141,7 +163,9 @@ const TahunAjaranPage = () => {
                           className="form-control"
                           placeholder="Nama Tahun Ajaran"
                           value={newTahun.name}
-                          onChange={(e) => setNewTahun({...newTahun, name: e.target.value})}
+                          onChange={(e) =>
+                            setNewTahun({ ...newTahun, name: e.target.value })
+                          }
                         />
                       </div>
                       <div className="form-group">
@@ -150,8 +174,13 @@ const TahunAjaranPage = () => {
                           type="date"
                           className="form-control"
                           name="tanggal_mulai"
-                          value = {newTahun.dateStart}
-                          onChange = {(e) => setNewTahun({...newTahun, dateStart: e.target.value})}
+                          value={newTahun.dateStart}
+                          onChange={(e) =>
+                            setNewTahun({
+                              ...newTahun,
+                              dateStart: e.target.value,
+                            })
+                          }
                           required
                         />
                       </div>
@@ -162,7 +191,12 @@ const TahunAjaranPage = () => {
                           className="form-control"
                           name="tanggal_berakhir"
                           value={newTahun.dateEnd}
-                          onChange = {(e) => setNewTahun({...newTahun, dateEnd: e.target.value})}
+                          onChange={(e) =>
+                            setNewTahun({
+                              ...newTahun,
+                              dateEnd: e.target.value,
+                            })
+                          }
                           required
                         />
                       </div>
@@ -176,7 +210,12 @@ const TahunAjaranPage = () => {
                             id="isAktif"
                             name="is_aktif"
                             checked={newTahun.status}
-                            onChange={(e) => setNewTahun({...newTahun, status: e.target.checked})}
+                            onChange={(e) =>
+                              setNewTahun({
+                                ...newTahun,
+                                status: e.target.checked,
+                              })
+                            }
                           />
                           <label
                             className="custom-control-label"
@@ -211,32 +250,43 @@ const TahunAjaranPage = () => {
                         <tr key={item.id ?? `new-${index}`}>
                           <td>{index + 1}</td>
                           <td>{item.name}</td>
-                          <td>{
-                              new Date(item.dateStart ?? "").toLocaleDateString("id-ID", {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              })
-                            }</td>
-                          <td>{
-                              new Date(item.dateEnd ?? "").toLocaleDateString("id-ID", {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              })
-                            }</td>
                           <td>
-                            <span className={`badge ${item.status ? 'badge-success' : 'badge-danger'}`}>
-                              {item.status ? 'Aktif' : 'Tidak'}
+                            {new Date(item.dateStart ?? "").toLocaleDateString(
+                              "id-ID",
+                              {
+                                day: "2-digit",
+                                month: "long",
+                                year: "numeric",
+                              },
+                            )}
+                          </td>
+                          <td>
+                            {new Date(item.dateEnd ?? "").toLocaleDateString(
+                              "id-ID",
+                              {
+                                day: "2-digit",
+                                month: "long",
+                                year: "numeric",
+                              },
+                            )}
+                          </td>
+                          <td>
+                            <span
+                              className={`badge ${item.status ? "badge-success" : "badge-danger"}`}
+                            >
+                              {item.status ? "Aktif" : "Tidak"}
                             </span>
                           </td>
-                          <td>{
-                              new Date(item.createdAt ?? "").toLocaleDateString("id-ID", {
+                          <td>
+                            {new Date(item.createdAt ?? "").toLocaleDateString(
+                              "id-ID",
+                              {
                                 day: "2-digit",
                                 month: "long",
                                 year: "numeric",
-                              })
-                            }</td>
+                              },
+                            )}
+                          </td>
                           <td>
                             <button
                               onClick={() => handleEdit(item)}
@@ -244,8 +294,10 @@ const TahunAjaranPage = () => {
                             >
                               <i className="far fa-edit"></i>
                             </button>
-                            <button className="btn btn-icon btn-danger"
-                              onClick={() => handleDelete(item.id!)}>
+                            <button
+                              className="btn btn-icon btn-danger"
+                              onClick={() => handleDelete(item.id!)}
+                            >
                               <i className="fa fa-trash"></i>
                             </button>
                           </td>
@@ -261,33 +313,37 @@ const TahunAjaranPage = () => {
                     className="modal fade show d-block"
                     tabIndex={-1}
                     role="dialog"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+                    style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
                   >
                     <div
                       className="modal-dialog modal-dialog-centered"
                       role="document"
                     >
                       <div className="modal-content">
-                        <form onSubmit = {saveEdit}>
-                        <div className="modal-header">
-                          <h5 className="modal-title">Edit Tahun Ajaran</h5>
-                          <button
-                            type="button"
-                            className="close"
-                            onClick={() => setShowEditModal(false)}
-                          >
-                            <span>&times;</span>
-                          </button>
-                        </div>
-                        <div className="modal-body">
-            
+                        <form onSubmit={saveEdit}>
+                          <div className="modal-header">
+                            <h5 className="modal-title">Edit Tahun Ajaran</h5>
+                            <button
+                              type="button"
+                              className="close"
+                              onClick={() => setShowEditModal(false)}
+                            >
+                              <span>&times;</span>
+                            </button>
+                          </div>
+                          <div className="modal-body">
                             <div className="form-group">
                               <label>Nama Tahun Ajaran</label>
                               <input
                                 type="text"
                                 className="form-control"
                                 defaultValue={selectedEdit.name}
-                                onChange={(e) => setSelectedEdit({...selectedEdit, name: e.target.value})}
+                                onChange={(e) =>
+                                  setSelectedEdit({
+                                    ...selectedEdit,
+                                    name: e.target.value,
+                                  })
+                                }
                                 required
                               />
                             </div>
@@ -297,7 +353,12 @@ const TahunAjaranPage = () => {
                                 type="date"
                                 className="form-control"
                                 value={selectedEdit.dateStart}
-                                onChange={(e) => setSelectedEdit({...selectedEdit, dateStart: e.target.value})}
+                                onChange={(e) =>
+                                  setSelectedEdit({
+                                    ...selectedEdit,
+                                    dateStart: e.target.value,
+                                  })
+                                }
                                 required
                               />
                             </div>
@@ -307,7 +368,12 @@ const TahunAjaranPage = () => {
                                 type="date"
                                 className="form-control"
                                 value={selectedEdit.dateEnd}
-                                onChange={(e) => setSelectedEdit({...selectedEdit, dateEnd: e.target.value})}
+                                onChange={(e) =>
+                                  setSelectedEdit({
+                                    ...selectedEdit,
+                                    dateEnd: e.target.value,
+                                  })
+                                }
                                 required
                               />
                             </div>
@@ -320,8 +386,12 @@ const TahunAjaranPage = () => {
                                   className="custom-control-input"
                                   id="editIsAktif"
                                   defaultChecked={selectedEdit.status}
-                                  onChange={(e) => setSelectedEdit({...selectedEdit, status: e.target.checked})}
-                                 
+                                  onChange={(e) =>
+                                    setSelectedEdit({
+                                      ...selectedEdit,
+                                      status: e.target.checked,
+                                    })
+                                  }
                                 />
                                 <label
                                   className="custom-control-label"
@@ -331,21 +401,20 @@ const TahunAjaranPage = () => {
                                 </label>
                               </div>
                             </div>
-                        
-                        </div>
-                        <div className="modal-footer">
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => setShowEditModal(false)}
-                          >
-                            Batal
-                          </button>
-                          <button type="submit" className="btn btn-primary">
-                            Simpan Perubahan
-                          </button>
-                        </div>
-                          </form>
+                          </div>
+                          <div className="modal-footer">
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={() => setShowEditModal(false)}
+                            >
+                              Batal
+                            </button>
+                            <button type="submit" className="btn btn-primary">
+                              Simpan Perubahan
+                            </button>
+                          </div>
+                        </form>
                       </div>
                     </div>
                   </div>

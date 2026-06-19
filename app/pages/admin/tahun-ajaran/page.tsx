@@ -113,8 +113,8 @@ const TahunAjaranPage = () => {
         alert(
           "Tidak dapat menghapus data karena masih terhubung dengan data lain",
         );
-        console.log("Gagal menghapus matkul ==", errorString);
-        console.log("Gagal menghapus matkul ==", errorData);
+        console.log("Gagal menghapus tahun ajaran ==", errorString);
+        console.log("Gagal menghapus tahun ajaran ==", errorData);
       }
     }
   };

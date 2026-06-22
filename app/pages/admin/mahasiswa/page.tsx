@@ -184,7 +184,7 @@ const MahasiswaPage = () => {
       await deleteMahasiswa(id);
       setMahasiswaList((prev) => prev.filter((m) => m.id !== id));
     } catch (err:any) {
-       console.error("Gagal delete kelas:", err);
+      console.error("Gagal delete kelas:", err);
 
       const errorData = err.response?.data;
       const errorStatus = err.response?.status; // Mengambil status code (misal: 500)

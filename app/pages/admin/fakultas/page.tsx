@@ -19,6 +19,7 @@ import AddForm from "@/app/components/form/AddForm";
 import ModalEditForm from "@/app/components/form/EditForm";
 import { useToast } from "@/app/components/context/ToastContext";
 import ModalConfirmDelete from "@/app/components/modal/ModalConfirmDelete";
+import LoadingSpinner from "@/app/components/loading/LoadingSpinner";
 
 interface Fakultas {
   id: string;
@@ -118,6 +119,7 @@ const FakultasPage = () => {
   //add
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
     await addFacultas({ name: name, code: code });
     setName("");
     setCode("");
@@ -376,6 +378,8 @@ const FakultasPage = () => {
                   title="Delete"
                   message="Apakah anda yakin ingin menghapus data ini?"
                 />
+                {/* LOADING SPINNER REUSABLE DI SINI */}
+                <LoadingSpinner isLoading={loading} />
               </div>
             </div>
           </div>

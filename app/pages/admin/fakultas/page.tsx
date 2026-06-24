@@ -1,9 +1,27 @@
 "use client";
 import api from "@/app/lib/axiosInstance";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  ColumnDef,
+  getSortedRowModel,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+
+//Komponen reusable
+import DataTable from "@/app/components/table/DataTable";
+import TableToolbar from "@/app/components/table/TableToolbar";
+import TablePagination from "@/app/components/table/TablePagination";
+import AddForm from "@/app/components/form/AddForm";
+import ModalEditForm from "@/app/components/form/EditForm";
+import { useToast } from "@/app/components/context/ToastContext";
+import ModalConfirmDelete from "@/app/components/modal/ModalConfirmDelete";
 
 interface Fakultas {
-  id: number;
+  id: string;
   name: string;
   code: string;
   createdAt: string;
@@ -30,7 +48,7 @@ const addFacultas = async (data: { name: string; code: string }) => {
 };
 
 const updateFacultas = async (
-  id: number,
+  id: string,
   data: { name?: string; code?: string },
 ) => {
   try {
@@ -42,14 +60,20 @@ const updateFacultas = async (
   }
 };
 
-const deleteFacultas = async (id: number) => {
+const deleteFacultas = async (id: string) => {
   const response = await api.delete(`/faculties/${id}`);
   return response.data;
 };
 const FakultasPage = () => {
+  const { showToast } = useToast(); // Ekstrak fungsi showToast
+
   const [faculties, setFaculties] = useState<Fakultas[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
   const [selectedFaculties, setSelectedFaculties] = useState<Fakultas | null>(
     null,
   );
@@ -58,6 +82,11 @@ const FakultasPage = () => {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
 
+  // State untuk search, sorting, pagination
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
 
   //Generate code otomatis dari nama
   const generateCode = (nameFakultas: string) => {
@@ -68,8 +97,8 @@ const FakultasPage = () => {
       .join(""); //misal 'fakultas teknologi informasi' => 'FTI'
   };
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+  const handleNameChange = (e: any) => {
+    const value = e?.target?.value || "";
     setName(value);
     setCode(generateCode(value)); //generate code otomatis dari nama
   };
@@ -90,15 +119,20 @@ const FakultasPage = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     await addFacultas({ name: name, code: code });
-
     setName("");
     setCode("");
+    showToast("successfully", "success");
     fetchFakultas();
   };
   //edit
   const openEditModal = (fakultas: Fakultas) => {
     setSelectedFaculties(fakultas);
     setIsEditModalOpen(true);
+  };
+
+  const openDeleteModal = (id: string) => {
+    setDeleteTargetId(id);
+    setIsDeleteModalOpen(true);
   };
 
   const closeEditModal = () => {
@@ -117,41 +151,113 @@ const FakultasPage = () => {
       fetchFakultas();
     }
   };
-
-  // const handleSave = async () => {
-  //   if (selectedFaculties) {
-  //     await updateFacultas(selectedFaculties.id, {
-  //       name: selectedFaculties.name,
-  //       code: selectedFaculties.code,
-  //     });
-  //     closeEditModal();
-  //     fetchFakultas();
-  //   }
-  // };
   //hapus
-  const handleDelete = async (id: number) => {
-    if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
+  const handleConfirmDelete = async () => {
+    if (!deleteTargetId) return;
     try {
-      await deleteFacultas(id);
-      setFaculties(faculties.filter((fakultas) => fakultas.id !== id));
+      await deleteFacultas(deleteTargetId);
+      showToast("successfully", "success");
       fetchFakultas();
     } catch (err: any) {
       //cek error nya apakah karena  forekey constraint
       const errorData = err.response?.data;
       //cek apa pesan error apa yang di kirim dari backend contoh {"code": "P2003", "message": "Foreign key violation"}
       const errorString = JSON.stringify(errorData || "").toLowerCase();
-      if (errorData?.code === "P2003") {
-        alert(
-          "Tidak dapat menghapus data karena masih terhubung dengan data lain",
-        );
-      } else {
-        alert("Terjadi kesalahan saat menghapus data" + err.message);
-      }
-
-      console.error("====Gagal delete fakultas ===", errorString);
-      fetchFakultas();
+          if (errorData?.code === "P2003") {
+            showToast(
+              "tidak dapat dihapus karena masi terhubung dengan data lain",
+              "error",
+            );
+          } else {
+            showToast("terjadi kesalahan saat menghapus data", "error");
+          }
+    } finally {
+      // Tutup modal dan reset ID target setelah selesai diproses
+      setIsDeleteModalOpen(false);
+      setDeleteTargetId(null);
     }
   };
+  // Columns untuk TanStack Table
+  const columns = useMemo<ColumnDef<Fakultas>[]>(
+    () => [
+      {
+        accessorFn: (row, index) => index + 1,
+        header: "#",
+      },
+      {
+        accessorKey: "name",
+        header: "Nama",
+      },
+      {
+        accessorKey: "code",
+        header: "Kode",
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Dibuat pada",
+        cell: (info) =>
+          new Date(info.getValue() as string).toLocaleDateString("id-ID", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          }),
+      },
+      {
+        header: "Aksi",
+        cell: ({ row }) => {
+          const fakultas = row.original; // data asli baris ini
+          return (
+            <>
+              <a
+                href="#"
+                className="btn btn-icon btn-primary m-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openEditModal(fakultas);
+                }}
+              >
+                <i className="far fa-edit"></i>
+              </a>
+              <a
+                href="#"
+                className="btn btn-icon btn-danger"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openDeleteModal(fakultas.id); // <-- Panggil fungsi pemembuka modal kustom
+                }}
+              >
+                <i className="fa fa-trash"></i>
+              </a>
+            </>
+          );
+        },
+      },
+    ],
+    [],
+  );
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
+  // Inisialisasi table
+  const table = useReactTable({
+    data: faculties,
+    columns,
+    state: {
+      pagination,
+      globalFilter,
+      sorting,
+    },
+    getSortedRowModel: getSortedRowModel(),
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onGlobalFilterChange: setGlobalFilter,
+  });
 
   return (
     <section className="section">
@@ -182,179 +288,94 @@ const FakultasPage = () => {
                 >
                   Tambah Fakultas
                 </button>
+
+                {/* IMPLEMENTASI ADD FORM KOMPONEN REUSABLE */}
                 <div className="collapse" id="collapseTambahFakultas">
                   <div className="card card-body">
-                    <form onSubmit={handleSubmit}>
-                      <div className="form-group">
-                        <label>Nama Fakultas</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Nama Fakultas"
-                          value={name}
-                          onChange={(e) => handleNameChange(e)}
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Kode Fakultas</label>
-                      </div>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Kode Fakultas"
-                        value={code}
-                        readOnly
-                      />
-                      <button type="submit" className="btn btn-primary">
-                        Simpan
-                      </button>
-                    </form>
+                    <AddForm
+                      onSubmit={handleSubmit}
+                      collapseTargetId="collapseTambahFakultas"
+                      submitText="Simpan"
+                      cancelText="Batal"
+                      fields={[
+                        {
+                          label: "Nama Fakultas",
+                          name: "name",
+                          type: "text",
+                          value: name,
+                          placeholder: "Masukkan Nama Fakultas",
+                          onChange: handleNameChange,
+                        },
+                        {
+                          label: "Kode Fakultas",
+                          name: "code",
+                          type: "text",
+                          value: code,
+                          placeholder: "Kode Fakultas Otomatis",
+                          disabled: true,
+                          onChange: () => {},
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
 
-                <div className="table-responsive">
-                  <table className="table table-striped">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Nama</th>
-                        <th>Kode</th>
-                        <th>Dibuat pada</th>
-                        <th>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {faculties.map((fakultas, index) => (
-                        <tr key={fakultas.id}>
-                          <td>{index + 1}</td>
-                          <td>{fakultas.name}</td>
-                          <td>{fakultas.code}</td>
-                          <td>
-                            {new Date(fakultas.createdAt).toLocaleString(
-                              "id-ID",
-                              {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              },
-                            )}
-                          </td>
-                          <td>
-                            <a
-                              href="#"
-                              className="btn btn-icon btn-primary"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openEditModal(fakultas);
-                              }}
-                            >
-                              <i className="far fa-edit"></i>
-                            </a>
-                            <a
-                              href="#"
-                              className="btn btn-icon btn-danger"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleDelete(fakultas.id);
-                              }}
-                            >
-                              <i className="fa fa-trash"></i>
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {/* Search and Pagnation */}
+                <TableToolbar
+                  globalFilter={globalFilter}
+                  setGlobalFilter={setGlobalFilter}
+                  pageSize={pagination.pageSize}
+                  setPageSize={(size) =>
+                    setPagination((old) => ({ ...old, pageSize: size }))
+                  }
+                />
 
-                {/* Modal */}
-                {isEditModalOpen && (
-                  <div
-                    className="modal fade show"
-                    style={{
-                      display: "block",
-                      backgroundColor: "rgba(0,0,0,0.5)",
-                      position: "fixed",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      justifyContent: "center",
-                      alignItems: "center",
-                      zIndex: 1050,
-                    }}
-                  >
-                    <div className="modal-dialog modal-dialog-centered">
-                      <div className="modal-content">
-                        <form onSubmit={handleEditSubmit}>
-                          <div className="modal-header">
-                            <h5 className="modal-title">Edit Fakultas</h5>
-                            <button
-                              type="button"
-                              className="close"
-                              onClick={closeEditModal}
-                            >
-                              <span>&times;</span>
-                            </button>
-                          </div>
-                          <div className="modal-body">
-                            <div className="form-group">
-                              <label>Nama Fakultas</label>
-                              <input
-                                type="text"
-                                className="form-control"
-                                name="name"
-                                value={selectedFaculties?.name || ""}
-                                onChange={(e) => {
-                                  // Cek dulu apakah selectedFaculties ada isinya (tidak null)
-                                  if (selectedFaculties) {
-                                    const newName = e.target.value;
-                                    setSelectedFaculties({
-                                      ...selectedFaculties, // Taruh spread di ATAS
-                                     name: newName,
-                                      code: generateCode(newName),
-                                    });
-                                  }
-                                }}
-                                required
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label>Kode Fakultas</label>
-                              <input
-                                type="text"
-                                className="form-control"
-                                name="code"
-                                value={selectedFaculties?.code || ""}
-                                onChange={(e) => {
-                                  if (selectedFaculties) {
-                                    setSelectedFaculties({
-                                      ...selectedFaculties,
-                                      code: e.target.value,
-                                    });
-                                  }
-                                }}
-                                readOnly
-                              />
-                            </div>
-                          </div>
-                          <div className="modal-footer">
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              onClick={closeEditModal}
-                            >
-                              Batal
-                            </button>
-                            <button type="submit" className="btn btn-primary">
-                              Simpan
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Table */}
+                <DataTable table={table} />
+
+                {/* Pagination */}
+                <TablePagination table={table} />
+
+                {/* Modal Edit Data Fakultas */}
+                <ModalEditForm
+                  title="Edit Data Fakultas"
+                  isOpen={isEditModalOpen}
+                  onClose={closeEditModal}
+                  onSubmit={handleEditSubmit}
+                  fields={[
+                    {
+                      label: "Nama Fakultas",
+                      name: "name",
+                      type: "text",
+                      placeholder: "Masukkan Nama Fakultas",
+                      value: selectedFaculties?.name || "",
+                      onChange: (e: any) =>
+                        setSelectedFaculties((prev: any) => ({
+                          ...prev,
+                          name: e.target.value,
+                        })),
+                    },
+                    {
+                      label: "Kode Fakultas",
+                      name: "code",
+                      type: "text",
+                      value: selectedFaculties?.code || "",
+                      disabled: true, // Karena kodenya otomatis ter-generate
+                      onChange: () => {},
+                    },
+                  ]}
+                />
+
+                <ModalConfirmDelete
+                  isOpen={isDeleteModalOpen}
+                  onClose={() => {
+                    setIsDeleteModalOpen(false);
+                    setDeleteTargetId(null);
+                  }}
+                  onConfirm={handleConfirmDelete}
+                  title="Delete"
+                  message="Apakah anda yakin ingin menghapus data ini?"
+                />
               </div>
             </div>
           </div>

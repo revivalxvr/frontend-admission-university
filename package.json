@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
     "@types/js-cookie": "^3.0.6",
     "axios": "^1.16.1",
     "bootstrap": "^5.3.6",
@@ -20,6 +21,7 @@
     "next": "15.3.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-select": "^5.10.2",
     "select2": "^4.1.0-rc.0"
   },
   "devDependencies": {

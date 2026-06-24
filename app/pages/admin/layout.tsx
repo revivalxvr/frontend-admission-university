@@ -1,6 +1,8 @@
 import React from 'react';
 import AdminNavbar from '../../components/AdminNavbar';
 import AdminSidebar from '../../components/AdminSidebar';
+// 1. Import ToastProvider dari folder tempat Anda menyimpan Context kemarin
+import { ToastProvider } from '@/app/components/context/ToastContext'; 
 
 export const metadata = {
   title: "Dashboard Admin",
@@ -14,7 +16,10 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         <AdminNavbar />
         <AdminSidebar />
         <div className="main-content">
-          {children}
+          {/* 2. Bungkus children dengan ToastProvider */}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </div>
       </div>
     </div>

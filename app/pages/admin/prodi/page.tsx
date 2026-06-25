@@ -204,25 +204,24 @@ const ProdiPage = () => {
       showToast("successfully", "success");
       fetchProdis();
     } catch (err: any) {
-      
-        console.error("Gagal delete fakultas:", err);
+      console.error("Gagal delete fakultas:", err);
 
-        const errorData = err.response?.data;
-        const errorStatus = err.response?.status; // Mengambil status code (misal: 500)
-        const errorString = JSON.stringify(errorData || "").toLowerCase();
+      const errorData = err.response?.data;
+      const errorStatus = err.response?.status; // Mengambil status code (misal: 500)
+      const errorString = JSON.stringify(errorData || "").toLowerCase();
 
-        // 1. Cek jika disebabkan oleh Foreign Key Constraint (Prisma P2003)
-        if (
-          errorData?.code === "P2003" ||
-          errorString.includes("foreign key") ||
-          errorString.includes("constraint")
-        ) {
-          showToast("data terhubung ke data lain", "error");
-        }
-        // 2. Jaring pengaman jika backend crash / Error 500
-        else if (errorStatus === 500) {
-          showToast("terjadi kesalahan", "error");
-        }
+      // 1. Cek jika disebabkan oleh Foreign Key Constraint (Prisma P2003)
+      if (
+        errorData?.code === "P2003" ||
+        errorString.includes("foreign key") ||
+        errorString.includes("constraint")
+      ) {
+        showToast("data terhubung ke data lain", "error");
+      }
+      // 2. Jaring pengaman jika backend crash / Error 500
+      else if (errorStatus === 500) {
+        showToast("terjadi kesalahan", "error");
+      }
     } finally {
       // Tutup modal dan reset ID target setelah selesai diproses
       setIsDeleteModalOpen(false);
@@ -230,6 +229,22 @@ const ProdiPage = () => {
       setLoading(false); // matikan loading spinner
     }
   };
+
+  //untuk deteksi perubahan  di field modal update
+  const handleEditProdiChange = (e: any) => {
+    // 1. Cek apakah ini berasal dari select (punya e.value) atau teks biasa (e.target.value)
+    const val = e?.target ? e.target.value : e?.value;
+
+    // 2. Jika e.target ada, ambil e.target.name. Jika tidak ada (berarti dari select),
+    // kita harus mengirimkan nama field-nya secara manual atau mendeteksinya.
+    const name = e?.target ? e.target.name : "facultyId";
+
+    setSelectedProdi((prev: any) => ({
+      ...prev,
+      [name]: val, // Menggunakan computed property name [] untuk mengubah state secara dinamis
+    }));
+  };
+  // end of perubahan modal update
 
   const columns = useMemo<ColumnDef<Prodi>[]>(
     () => [
@@ -390,9 +405,8 @@ const ProdiPage = () => {
                 </div>
 
                 <div className="table-responsive">
-                  
                   {/* LOADING SPINNER REUSABLE DI SINI */}
-                    <LoadingSpinner isLoading={loading} />
+                  <LoadingSpinner isLoading={loading} />
 
                   {/* Search and Pagnation */}
                   <TableToolbar
@@ -418,22 +432,14 @@ const ProdiPage = () => {
                       {
                         label: "Nama Fakultas",
                         name: "facultyId",
-                        type: "select", // 1. Ubah menjadi 'select' agar user bisa memilih
-                        value: selectedProdi?.facultyId || "", // 2. Arahkan ke facultyId 
+                        type: "select",
+                        value: selectedProdi?.facultyId || "",
                         placeholder: "-- Pilih Fakultas --",
-                        // 3. Masukkan array options fakultas yang sudah di-map sebelumnya
                         options: facultiList.map((f) => ({
                           value: f.id,
                           label: f.name,
                         })),
-                        onChange: (e: any) => {
-                          // 4. Mengatasi perubahan select, amankan jika menggunakan react-select atau HTML select biasa
-                          const val = e?.target ? e.target.value : e?.value;
-                          setSelectedProdi((prev: any) => ({
-                            ...prev,
-                            facultyId: val, // Ubah khusus state facultyId
-                          }));
-                        },
+                        onChange: handleEditProdiChange, //panggil fungi untuk deteksi perubahan pada feld form
                       },
                       {
                         label: "Nama Prodi",
@@ -441,11 +447,7 @@ const ProdiPage = () => {
                         type: "text",
                         value: selectedProdi?.name || "",
                         placeholder: "Masukkan Nama Prodi",
-                        onChange: (e: any) =>
-                          setSelectedProdi((prev: any) => ({
-                            ...prev,
-                            name: e.target.value, // 5. Mengubah khusus properti 'name'
-                          })),
+                        onChange: handleEditProdiChange, 
                       },
                       {
                         label: "Kode Prodi",
@@ -453,11 +455,7 @@ const ProdiPage = () => {
                         type: "text",
                         value: selectedProdi?.code || "",
                         placeholder: "Masukkan Kode Prodi",
-                        onChange: (e: any) =>
-                          setSelectedProdi((prev: any) => ({
-                            ...prev,
-                            code: e.target.value, // 6. Mengubah khusus properti 'code' (sebelumnya tertulis 'name')
-                          })),
+                        onChange: handleEditProdiChange, 
                       },
                     ]}
                   />

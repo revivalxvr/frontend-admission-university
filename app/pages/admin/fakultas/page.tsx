@@ -142,17 +142,33 @@ const FakultasPage = () => {
     setIsEditModalOpen(false);
   };
 
-  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (selectedFaculties) {
-      await updateFacultas(selectedFaculties.id, {
-        name: selectedFaculties.name,
-        code: selectedFaculties.code,
-      });
-      closeEditModal();
-      fetchFakultas();
-    }
-  };
+ const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  if (!selectedFaculties) return;
+
+  // 1. Nyalakan loading spinner sebelum menembak API
+  setLoading(true); 
+
+  try {
+    // Jalankan fungsi update ke backend
+    await updateFacultas(selectedFaculties.id, {
+      name: selectedFaculties.name,
+      code: selectedFaculties.code,
+    });
+    
+    // 2. Tampilkan pesan sukses lewat Toast kustom
+    showToast("successfully", "success");
+    
+    closeEditModal();
+    fetchFakultas();
+  } catch (error) {
+    // 3. Tampilkan pesan gagal jika ada kendala jaringan/database
+    showToast("Gagal memperbarui data fakultas.", "error");
+  } finally {
+    // 4. Matikan loading spinner di blok finally (baik sukses maupun gagal)
+    setLoading(false); 
+  }
+};
   //hapus
   const handleConfirmDelete = async () => {
     if (!deleteTargetId) return;

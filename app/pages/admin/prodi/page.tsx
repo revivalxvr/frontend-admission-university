@@ -1,9 +1,34 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import api from '@/app/lib/axiosInstance';
+"use client";
+import React, { useState, useEffect, useMemo } from "react";
+import api from "@/app/lib/axiosInstance";
+import {
+  ColumnDef,
+  getSortedRowModel,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
 
+//Komponen reusable
+import DataTable from "@/app/components/table/DataTable";
+import TableToolbar from "@/app/components/table/TableToolbar";
+import TablePagination from "@/app/components/table/TablePagination";
+import AddForm from "@/app/components/form/AddForm";
+import ModalEditForm from "@/app/components/form/EditForm";
+import { useToast } from "@/app/components/context/ToastContext";
+import ModalConfirmDelete from "@/app/components/modal/ModalConfirmDelete";
+import LoadingSpinner from "@/app/components/loading/LoadingSpinner";
 
-
+interface Prodi {
+  id: string;
+  name: string;
+  code: string;
+  facultyId: string;
+  faculty?: Fakultas;
+  createdAt: string;
+}
 interface Fakultas {
   id: string;
   name: string;
@@ -11,42 +36,56 @@ interface Fakultas {
   createdAt: string;
   updateAt: string;
 }
-interface Prodi {
-  id: number;
-  name: string;
-  code: string;
-  facultyId:string;
-  faculty?: Fakultas;
-  createdAt: string;
-}
 
 //API services
 const getProdis = async () => {
-  const response = await api.get('/majors');
+  const response = await api.get("/majors");
   return response.data.data;
-}
+};
 const getFaculties = async () => {
-  const response = await api.get('/faculties');
+  const response = await api.get("/faculties");
   return response.data.data;
-}
-const addProdis = async (data: { name: string; code: string; facultyId: string }) => {
-  const response = await api.post('/majors', data);
+};
+const addProdis = async (data: {
+  name: string;
+  code: string;
+  facultyId: string;
+}) => {
+  const response = await api.post("/majors", data);
   return response.data;
-}
+};
 
-const getProdiById = async (id: number) => {
-  const response = await api.get(`/majors/${id}`);
-  return response.data.data;
-}
-const updateProdis = async (id: number, data: { name: string; code: string; facultyId: string }) => {
+const updateProdis = async (
+  id: string,
+  data: { name: string; code: string; facultyId: string },
+) => {
   const response = await api.put(`/majors/${id}`, data);
   return response.data;
-}
-const deleteProdis = async (id: number) => {
+};
+const deleteProdis = async (id: string) => {
   const response = await api.delete(`/majors/${id}`);
   return response.data;
-}
+};
 const ProdiPage = () => {
+  const { showToast } = useToast();
+
+  const [loading, setLoading] = useState(true);
+
+  //state untuk delete data
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  //end of state untuk delete
+
+  // State untuk search, sorting, pagination
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProdi, setSelectedProdi] = useState<Partial<Prodi>>({});
   const [newProdi, setNewProdi] = useState({
@@ -59,21 +98,27 @@ const ProdiPage = () => {
   const [facultiList, setFacultiList] = useState<Fakultas[]>([]);
 
   const fetchProdis = async () => {
-   try {
-     const data = await getProdis();
-    setProdiList(data);
-   } catch (error) {
-      console.log("Gagal mengambil data prodi ==",error);
-   }
-  }
+    setLoading(true);
+    try {
+      const data = await getProdis();
+      setProdiList(data);
+    } catch (error) {
+      console.log("Gagal mengambil data prodi ==", error);
+    } finally {
+      setLoading(false); // matikan loading spinner
+    }
+  };
   const fetchFaculties = async () => {
+    setLoading(true);
     try {
       const data = await getFaculties();
-     setFacultiList(data);
+      setFacultiList(data);
     } catch (error) {
-       console.log("Gagal mengambil data fakultas ==",error);
+      console.log("Gagal mengambil data fakultas ==", error);
+    } finally {
+      setLoading(false); // matikan loading spinner
     }
-  }
+  };
   //ambil data awal
   useEffect(() => {
     fetchProdis();
@@ -83,92 +128,194 @@ const ProdiPage = () => {
     setSelectedProdi(prodi);
     setIsEditModalOpen(true);
   };
+  const openDeleteModal = (id: string) => {
+    setDeleteTargetId(id);
+    setIsDeleteModalOpen(true);
+  };
 
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedProdi({});
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setSelectedProdi((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleNewProdiChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleNewProdiChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
     setNewProdi((prev) => ({ ...prev, [name]: value }));
   };
 
-
+  //create prodi
   const handleAddNewProdi = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const saved = await addProdis(newProdi);
       setProdiList((prev) => [...prev, saved]);
       setNewProdi({ name: "", code: "", facultyId: "" });
+      showToast("successfully", "success");
       fetchProdis();
     } catch (error) {
+      showToast("terjadi kesalahan", "error");
       console.error("Gagal menambahkan prodi ==", error);
+    } finally {
+      setLoading(false); // matikan loading spinner
     }
   };
+  //end of create prodi
 
+  //untuk update
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (
-    !selectedProdi.id || 
-    !selectedProdi.name || 
-    !selectedProdi.code || 
-    !selectedProdi.facultyId
-  ) return;
+      !selectedProdi.id ||
+      !selectedProdi.name ||
+      !selectedProdi.code ||
+      !selectedProdi.facultyId
+    )
+      return;
+    setLoading(true);
     try {
-      const updated = await updateProdis(selectedProdi.id, 
-        {
-          name: selectedProdi.name,
-          code: selectedProdi.code,
-          facultyId: selectedProdi.facultyId,
-        }
-      );
+      const updated = await updateProdis(selectedProdi.id, {
+        name: selectedProdi.name,
+        code: selectedProdi.code,
+        facultyId: selectedProdi.facultyId,
+      });
+      showToast("successfully", "success");
       fetchProdis();
       closeEditModal();
-      setProdiList((prev) => prev.map((prodi) => (prodi.id === updated.id ? updated : prodi)));
+      setProdiList((prev) =>
+        prev.map((prodi) => (prodi.id === updated.id ? updated : prodi)),
+      );
     } catch (error) {
-      console.log("Gagal menyimpan perubahan prodi ==",error);
+      showToast("terjadi kesalahan", "error");
+      console.log("Gagal menyimpan perubahan prodi ==", error);
+    } finally {
+      setLoading(false); // matikan loading spinner
+    }
+  };
+  //end of update
+
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+    setLoading(true);
+    try {
+      await deleteProdis(deleteTargetId);
+      showToast("successfully", "success");
+      fetchProdis();
+    } catch (err: any) {
+      
+        console.error("Gagal delete fakultas:", err);
+
+        const errorData = err.response?.data;
+        const errorStatus = err.response?.status; // Mengambil status code (misal: 500)
+        const errorString = JSON.stringify(errorData || "").toLowerCase();
+
+        // 1. Cek jika disebabkan oleh Foreign Key Constraint (Prisma P2003)
+        if (
+          errorData?.code === "P2003" ||
+          errorString.includes("foreign key") ||
+          errorString.includes("constraint")
+        ) {
+          showToast("data terhubung ke data lain", "error");
+        }
+        // 2. Jaring pengaman jika backend crash / Error 500
+        else if (errorStatus === 500) {
+          showToast("terjadi kesalahan", "error");
+        }
+    } finally {
+      // Tutup modal dan reset ID target setelah selesai diproses
+      setIsDeleteModalOpen(false);
+      setDeleteTargetId(null);
+      setLoading(false); // matikan loading spinner
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
-    try {
-      await deleteProdis(id);
-      setProdiList((prev) => prev.filter((prodi) => prodi.id !== id));
-      alert("Data prodi berhasil dihapus!");
-      fetchProdis();
-    } catch (err : any) {
-      console.error("Gagal delete fakultas:", err);
+  const columns = useMemo<ColumnDef<Prodi>[]>(
+    () => [
+      {
+        accessorFn: (row, index) => index + 1,
+        header: "#",
+      },
+      {
+        //Mengambil data relasi dari objek bersarang (faculty.name)
+        accessorFn: (row) => row.faculty?.name || "-",
+        id: "facultyName", // WAJIB menambahkan properti 'id' jika menggunakan accessorFn
+        header: "Nama Fakultas",
+      },
+      {
+        accessorKey: "name",
+        header: "Nama Prodi",
+      },
+      {
+        accessorKey: "code",
+        header: "Kode",
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Dibuat pada",
+        cell: (info) =>
+          new Date(info.getValue() as string).toLocaleDateString("id-ID", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          }),
+      },
+      {
+        header: "Aksi",
+        cell: ({ row }) => {
+          const prodi = row.original; // data asli baris ini
+          return (
+            <>
+              <a
+                href="#"
+                className="btn btn-icon btn-primary m-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openEditModal(prodi); // Mengirim objek prodi ke modal edit
+                }}
+              >
+                <i className="far fa-edit"></i>
+              </a>
+              <a
+                href="#"
+                className="btn btn-icon btn-danger"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openDeleteModal(prodi.id); // <-- Panggil fungsi pemembuka modal kustom
+                }}
+              >
+                <i className="fa fa-trash"></i>
+              </a>
+            </>
+          );
+        },
+      },
+    ],
+    [],
+  );
+  const table = useReactTable({
+    data: prodiList,
+    columns,
+    state: {
+      pagination,
+      globalFilter,
+      sorting,
+    },
+    getSortedRowModel: getSortedRowModel(),
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onGlobalFilterChange: setGlobalFilter,
+  });
 
-  const errorData = err.response?.data;
-  const errorStatus = err.response?.status; // Mengambil status code (misal: 500)
-  const errorString = JSON.stringify(errorData || "").toLowerCase();
-
-  // 1. Cek jika disebabkan oleh Foreign Key Constraint (Prisma P2003)
-  if (
-    errorData?.code === "P2003" || 
-    errorString.includes("foreign key") ||
-    errorString.includes("constraint")
-  ) {
-    alert("Tidak dapat menghapus data karena masih terhubung dengan data lain");
-  } 
-  // 2. Jaring pengaman jika backend crash / Error 500
-  else if (errorStatus === 500) {
-    alert("Terjadi kesalahan pada server (Internal Server Error 500). Mohon periksa log backend Anda.");
-  } 
-  // 3. Error umum lainnya
-  else {
-    const pesanError = errorData?.message || err.message || "Unknown error";
-    alert("Terjadi kesalahan saat menghapus data: " + pesanError);
-  }
-  }
-}
+  const facultyOptions = facultiList.map((f) => ({
+    value: f.id,
+    label: f.name,
+  }));
 
   return (
     <section className="section">
@@ -176,7 +323,9 @@ const ProdiPage = () => {
         <h1>Master</h1>
         <div className="section-header-breadcrumb">
           <div className="breadcrumb-item">Master</div>
-          <div className="breadcrumb-item"><a href="/admin/prodi">Program Studi</a></div>
+          <div className="breadcrumb-item">
+            <a href="/admin/prodi">Program Studi</a>
+          </div>
         </div>
       </div>
 
@@ -189,169 +338,146 @@ const ProdiPage = () => {
           <div className="col-12">
             <div className="card">
               <div className="card-body">
-                <button className="btn btn-primary btn-sm mb-2" type="button" data-toggle="collapse" data-target="#collapseTambahProdi">
+                <button
+                  className="btn btn-primary btn-sm mb-2"
+                  type="button"
+                  data-toggle="collapse"
+                  data-target="#collapseTambahProdi"
+                >
                   Tambah Prodi
                 </button>
                 <div className="collapse" id="collapseTambahProdi">
                   <div className="card card-body">
-                    <form onSubmit={handleAddNewProdi}>
-                      <div className="form-group">
-                        <label htmlFor="fakultas">Nama Fakultas</label>
-                        <select
-                          className="form-control"
-                          id="fakultas"
-                          name="facultyId"
-                          value={newProdi.facultyId}
-                          onChange={handleNewProdiChange}
-                          required
-                        >
-                          <option value="">-- Pilih Fakultas --</option>
-                          {facultiList.map((f) => (
-                            <option key={f.id} value={f.id}>
-                              {f.name}
-                            </option>
-                          ))}
-                          <option value=""></option>
-                         
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Nama Prodi</label>
-                        <input
-                          type="text"
-                          name="name"
-                          className="form-control"
-                          placeholder="Nama Prodi"
-                          value={newProdi.name}
-                          onChange={handleNewProdiChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Kode</label>
-                        <input
-                          type="text"
-                          name="code"
-                          className="form-control"
-                          placeholder="Kode"
-                          value={newProdi.code}
-                          onChange={handleNewProdiChange}
-                          required
-                        />
-                      </div>
-                      <button type="submit" className="btn btn-primary">Simpan</button>
-                    </form>
+                    <AddForm
+                      onSubmit={handleAddNewProdi}
+                      collapseTargetId="collapseTambahProdi" // Sesuaikan dengan id target collapse di halaman Prodi Anda
+                      submitText="Simpan"
+                      cancelText="Batal"
+                      fields={[
+                        {
+                          label: "Nama Fakultas",
+                          name: "facultyId",
+                          type: "select", //Atur type menjadi 'select'
+                          value: newProdi.facultyId,
+                          placeholder: "-- Pilih Fakultas --",
+                          options: facultyOptions, // Masukkan array opsi yang dibuat di atas
+                          onChange: (e: any) => {
+                            const val = e?.target ? e.target.value : e?.value;
+                            handleNewProdiChange({
+                              target: { name: "facultyId", value: val },
+                            } as any);
+                          },
+                        },
+                        {
+                          label: "Nama Prodi",
+                          name: "name",
+                          type: "text",
+                          value: newProdi.name,
+                          placeholder: "Masukkan Nama Program Studi",
+                          onChange: (e: any) => handleNewProdiChange(e),
+                        },
+                        {
+                          label: "Kode Prodi",
+                          name: "code",
+                          type: "text",
+                          value: newProdi.code,
+                          placeholder: "Masukkan Kode Prodi",
+                          onChange: (e: any) => handleNewProdiChange(e),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
 
                 <div className="table-responsive">
-                  <table className="table table-striped" id="table-1">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Fakultas</th>
-                        <th>Nama</th>
-                        <th>Kode</th>
-                        <th>Dibuat pada</th>
-                        <th>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {prodiList.map((prodi, index) => (
-                        <tr key={prodi.id ?? `new-${index}`}>
-                          <td>{index + 1}</td>
-                          <td>{prodi.faculty?.name}</td>
-                          <td>{prodi.name}</td>
-                          <td>{prodi.code}</td>
-                          <td>
-                            {
-                              new Date(prodi.createdAt ?? "").toLocaleString("id-ID", {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              })
-                            }
-                            </td>
-                          <td>
-                            <a href="#" className="btn btn-icon btn-primary" onClick={(e) => { e.preventDefault(); openEditModal(prodi); }}>
-                              <i className="far fa-edit"></i>
-                            </a>
-                            <a href="#" className="btn btn-icon btn-danger" onClick={(e) => { e.preventDefault(); handleDelete(prodi.id); }}>
-                              <i className="fa fa-trash"></i>
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  
+                  {/* LOADING SPINNER REUSABLE DI SINI */}
+                    <LoadingSpinner isLoading={loading} />
+
+                  {/* Search and Pagnation */}
+                  <TableToolbar
+                    globalFilter={globalFilter}
+                    setGlobalFilter={setGlobalFilter}
+                    pageSize={pagination.pageSize}
+                    setPageSize={(size) =>
+                      setPagination((old) => ({ ...old, pageSize: size }))
+                    }
+                  />
+                  {/* Table */}
+                  <DataTable table={table} />
+
+                  {/* Pagination */}
+                  <TablePagination table={table} />
+
+                  <ModalEditForm
+                    title="Edit Data Prodi"
+                    isOpen={isEditModalOpen}
+                    onClose={closeEditModal}
+                    onSubmit={handleSave}
+                    fields={[
+                      {
+                        label: "Nama Fakultas",
+                        name: "facultyId",
+                        type: "select", // 1. Ubah menjadi 'select' agar user bisa memilih
+                        value: selectedProdi?.facultyId || "", // 2. Arahkan ke facultyId 
+                        placeholder: "-- Pilih Fakultas --",
+                        // 3. Masukkan array options fakultas yang sudah di-map sebelumnya
+                        options: facultiList.map((f) => ({
+                          value: f.id,
+                          label: f.name,
+                        })),
+                        onChange: (e: any) => {
+                          // 4. Mengatasi perubahan select, amankan jika menggunakan react-select atau HTML select biasa
+                          const val = e?.target ? e.target.value : e?.value;
+                          setSelectedProdi((prev: any) => ({
+                            ...prev,
+                            facultyId: val, // Ubah khusus state facultyId
+                          }));
+                        },
+                      },
+                      {
+                        label: "Nama Prodi",
+                        name: "name",
+                        type: "text",
+                        value: selectedProdi?.name || "",
+                        placeholder: "Masukkan Nama Prodi",
+                        onChange: (e: any) =>
+                          setSelectedProdi((prev: any) => ({
+                            ...prev,
+                            name: e.target.value, // 5. Mengubah khusus properti 'name'
+                          })),
+                      },
+                      {
+                        label: "Kode Prodi",
+                        name: "code",
+                        type: "text",
+                        value: selectedProdi?.code || "",
+                        placeholder: "Masukkan Kode Prodi",
+                        onChange: (e: any) =>
+                          setSelectedProdi((prev: any) => ({
+                            ...prev,
+                            code: e.target.value, // 6. Mengubah khusus properti 'code' (sebelumnya tertulis 'name')
+                          })),
+                      },
+                    ]}
+                  />
+
+                  <ModalConfirmDelete
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => {
+                      setIsDeleteModalOpen(false);
+                      setDeleteTargetId(null);
+                    }}
+                    onConfirm={handleDelete}
+                    title="Delete"
+                    message="Apakah anda yakin ingin menghapus data ini?"
+                  />
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {isEditModalOpen && (
-        <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <form onSubmit={handleSave}>
-                <div className="modal-header">
-                  <h5 className="modal-title">Edit Program Studi</h5>
-                  <button type="button" className="close" onClick={closeEditModal}>
-                    <span>&times;</span>
-                  </button>
-                </div>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label>Nama Fakultas</label>
-                    <select
-                      name="fakultas"
-                      className="form-control"
-                      value={selectedProdi.facultyId}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">-- Pilih Fakultas --</option>
-                      {facultiList.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Nama Prodi</label>
-                    <input
-                      type="text"
-                      name="name"
-                      className="form-control"
-                      value={selectedProdi.name}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Kode</label>
-                    <input
-                      type="text"
-                      name="code"
-                      className="form-control"
-                      value={selectedProdi.code}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={closeEditModal}>Batal</button>
-                  <button type="submit" className="btn btn-primary">Simpan</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };

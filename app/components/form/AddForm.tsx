@@ -25,6 +25,7 @@ interface FieldConfig {
   name: string;
   type: FieldType;
   value: string | number | boolean;
+  gridClass?: string;
   onChange: (
     e:
       | React.ChangeEvent<
@@ -56,9 +57,10 @@ const AddForm: React.FC<DynamicFormProps> = ({
 }) => {
   return (
     <form onSubmit={onSubmit}>
-      {fields.map((field, idx) => (
-        <div
-          className={`form-group ${
+      <div className="row">
+         {fields.map((field, idx) => (
+        <div 
+          className={`${field.gridClass || "col-12"} form-group ${
             field.type === "checkbox" ? "form-check" : ""
           }`}
           key={idx}
@@ -151,6 +153,8 @@ const AddForm: React.FC<DynamicFormProps> = ({
           )}
         </div>
       ))}
+      </div>
+     
 
       <button type="submit" className="btn btn-primary">
         {submitText}

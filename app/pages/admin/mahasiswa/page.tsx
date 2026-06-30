@@ -427,103 +427,7 @@ const MahasiswaPage = () => {
                 </button>
                 <div className="collapse" id="collapseTambahMahasiswa">
                   <div className="card card-body">
-                    {/* <form
-                      action="#"
-                      method="POST"
-                      onSubmit={handleAddNewMahasiswa}
-                    >
-                      <div className="row">
-                        <div className="form-group col-md-6">
-                          <label>Nama</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="name"
-                            placeholder="Nama"
-                            value={newMahasiswa.name}
-                            onChange={handleNewMahasiswaChange}
-                          />
-                        </div>
-                        <div className="form-group col-md-6">
-                          <label>Email</label>
-                          <input
-                            type="email"
-                            className="form-control"
-                            name="email"
-                            placeholder="Email"
-                            value={newMahasiswa.email}
-                            onChange={handleNewMahasiswaChange}
-                          />
-                        </div>
-                        <div className="form-group col-md-3">
-                          <label>Semester</label>
-                          <input
-                            type="number"
-                            className="form-control"
-                            name="semester"
-                            placeholder="Semester"
-                            value={newMahasiswa.semester}
-                            onChange={handleNewMahasiswaChange}
-                          />
-                        </div>
-                        <div className="form-group col-md-3">
-                          <label>Angkatan</label>
-                          <input
-                            type="number"
-                            className="form-control"
-                            name="classOf"
-                            placeholder="Angkatan"
-                            value={newMahasiswa.classOf}
-                            onChange={handleNewMahasiswaChange}
-                          />
-                        </div>
-                        <div className="form-group col-md-6">
-                          <label>Kelas</label>
-                          <select
-                            className="form-control"
-                            name="classId"
-                            value={newMahasiswa.classId}
-                            onChange={handleNewMahasiswaChange}
-                          >
-                            <option>--Pilih Kelas--</option>
-                            {kelasList.map((kelas) => (
-                              <option key={kelas.id} value={kelas.id}>
-                                {kelas.name} ({kelas.major.name})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="form-group col-md-6">
-                          <label>Golongan UKT</label>
-                          <select
-                            className="form-control"
-                            name="tfGroupId"
-                            value={newMahasiswa.tfGroupId}
-                            onChange={handleNewMahasiswaChange}
-                          >
-                            <option>--Pilih Golongan UKT--</option>
-                            {golUktList.map((tfGroup) => (
-                              <option key={tfGroup.id} value={tfGroup.id}>
-                                {tfGroup.group}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <button type="submit" className="btn btn-primary">
-                          Simpan
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          data-toggle="collapse"
-                          data-target="#collapseEditMahasiswa"
-                        >
-                          Batal
-                        </button>
-                      </div>
-                    </form> */}
+               
                      <AddForm
                       onSubmit={handleAddNewMahasiswa}
                       collapseTargetId="collapseTambahMahasiswa"
@@ -662,7 +566,7 @@ const MahasiswaPage = () => {
                       }
                     
                     ]}
-                  />
+                    />
                   <ModalConfirmDelete
                     isOpen={isDeleteModalOpen}
                     onClose={() => {

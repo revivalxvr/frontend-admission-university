@@ -1,7 +1,24 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import api from "@/app/lib/axiosInstance";
-
+import {
+  ColumnDef,
+  getSortedRowModel,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+//Komponen reusable
+import DataTable from "@/app/components/table/DataTable";
+import TableToolbar from "@/app/components/table/TableToolbar";
+import TablePagination from "@/app/components/table/TablePagination";
+import AddForm from "@/app/components/form/AddForm";
+import ModalEditForm from "@/app/components/form/EditForm";
+import { useToast } from "@/app/components/context/ToastContext";
+import ModalConfirmDelete from "@/app/components/modal/ModalConfirmDelete";
+import LoadingSpinner from "@/app/components/loading/LoadingSpinner";
 interface Fakultas {
   id: string;
   name: string;
@@ -25,7 +42,7 @@ interface Dosen {
   lectureNumber: number;
   position: string;
   majorId: string;
-  major?: Prodi & { faculty?: Fakultas };
+  major?: Prodi 
   createdAt: string;
   updateAt: string;
 }
@@ -72,7 +89,24 @@ const deleteDosen = async (id: string) => {
 };
 // end of API Services
 const DosenPage = () => {
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const { showToast } = useToast();
+    const [loading, setLoading] = useState(true);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
+    //state untuk delete data
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    //end of state untuk delete
+  
+    // State untuk search, sorting, pagination
+    const [globalFilter, setGlobalFilter] = useState("");
+    const [sorting, setSorting] = useState<SortingState>([
+      { id: "name", desc: false },
+    ]);
+    const [pagination, setPagination] = useState({
+      pageIndex: 0,
+      pageSize: 10,
+    });
   const [selectedDosen, setSelectedDosen] = useState<Partial<Dosen>>({});
   const [newDosen, setNewDosen] = useState({
     name: "",
@@ -85,20 +119,26 @@ const DosenPage = () => {
   const [dosenList, setDosenList] = useState<Dosen[]>([]);
 
   const fetchDosen = async () => {
+    setLoading(true);
     try {
       const data = await getDosen();
       setDosenList(data);
     } catch (error) {
       console.log("Gagal mengambil data dosen ==", error);
+    } finally {
+      setLoading(false); // matikan loading spinner
     }
   };
 
   const fetchProdis = async () => {
+    setLoading(true);
     try {
       const data = await getProdis();
       setProdiList(data);
     } catch (error) {
       console.log("Gagal mengambil data prodi ==", error);
+    } finally {
+      setLoading(false); // matikan loading spinner
     }
   };
 
@@ -116,9 +156,14 @@ const DosenPage = () => {
     setSelectedDosen({});
     setIsEditModalOpen(false);
   };
+  const openDeleteModal = (id: string) => {
+    setDeleteTargetId(id);
+    setIsDeleteModalOpen(true);
+  };
 
   const handleAddNewDosen = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const saved = await addDosen(newDosen);
       setDosenList((prev) => [...prev, saved]);
@@ -129,9 +174,13 @@ const DosenPage = () => {
         position: "",
         majorId: "",
       });
+      showToast("successfully", "success");
       fetchDosen();
     } catch (error) {
+      showToast("terjadi kesalahan", "error");
       console.error("Gagal menambahkan dosen ==", error);
+    } finally {
+      setLoading(false); // matikan loading spinner
     }
   };
 
@@ -152,6 +201,7 @@ const DosenPage = () => {
   const handleSave = async (e:React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if(!selectedDosen.id) return;
+    setLoading(true);
     try {
       const updated = await updateDosen(selectedDosen.id, {
         name: selectedDosen.name,
@@ -164,32 +214,137 @@ const DosenPage = () => {
         prev.map((dosen) => (dosen.id === updated.id ? updated : dosen)),
       );
       closeEditModal();
+      showToast("successfully", "success");
       fetchDosen();
     } catch (error) {
       console.log ("Gagal menyimpan perubahan dosen ==",error);
+      showToast("terjadi kesalahan", "error");
+    } finally {
+      setLoading(false); // matikan loading spinner
     }
   };
-  const handleDelete = async (id: string) => {
-    if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+    setLoading(true);
     try {
-      await deleteDosen(id);
-      setDosenList((prev) => prev.filter((dosen) => dosen.id !== id));
-      alert("Data dosen berhasil dihapus!");
+      await deleteDosen(deleteTargetId);
+      showToast("successfully", "success");
       fetchDosen();
     } catch (error: any) {
+      showToast("terjadi kesalahan", "error");
       //cek error nya apakah karena  forekey constraint
       const errorData = error.response?.data;
       //cek apa pesan error apa yang di kirim dari backend contoh {"code": "P2003", "message": "Foreign key violation"}
       const errorString = JSON.stringify(errorData || "").toLowerCase();
       if (errorData?.code === "P2003") {
-        alert(
-          "Tidak dapat menghapus data karena masih terhubung dengan data lain",
-        );
+        showToast("data terhubung ke data lain", "error");
         console.log("Gagal menghapus dosen ==", errorString);
         console.log("Gagal menghapus dosen ==", errorData);
       }
-    }
+    }finally {
+      // Tutup modal dan reset ID target setelah selesai diproses
+      setIsDeleteModalOpen(false);
+      setDeleteTargetId(null);
+      setLoading(false); // matikan loading spinner
+    }  
   };
+
+  const columns = useMemo<ColumnDef<Dosen>[]>(
+        () => [
+          {
+            accessorFn: (row, index) => index + 1,
+            header: "#",
+          },
+          {
+            accessorKey: "name",
+            header: "Nama",
+          },
+          {
+            accessorKey: "email",
+            header: "Email",
+          },
+           {
+            accessorFn:(row) => row.major?.faculty?.name || "-",
+            id:"facultyName",
+            header: "Fakultas",
+          },
+          {
+            accessorFn:(row) => row.major?.name || "-",
+            id:"majorName",
+            header: "Prodi",
+          },
+            {
+            accessorKey: "lectureNumber",
+            header: "NIP",
+          },
+          {
+            accessorKey: "position",
+            header: "Jabatan",
+          },
+          {
+            accessorKey: "createdAt",
+            header: "Dibuat pada",
+            cell: (info) =>
+              new Date(info.getValue() as string).toLocaleDateString("id-ID", {
+                weekday: "long",
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              }),
+          },
+          {
+            header: "Aksi",
+            cell: ({ row }) => {
+              const dosen = row.original; // data asli baris ini
+              return (
+                <>
+                  <a
+                    href="#"
+                    className="btn btn-icon btn-primary m-1"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openEditModal(dosen); // Mengirim objek prodi ke modal edit
+                    }}
+                  >
+                    <i className="far fa-edit"></i>
+                  </a>
+                  <a
+                    href="#"
+                    className="btn btn-icon btn-danger"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openDeleteModal(dosen.id);
+                    }}
+                  >
+                    <i className="fa fa-trash"></i>
+                  </a>
+                </>
+              );
+            },
+          },
+        ],
+        [],
+      );
+  const table = useReactTable({
+        data: dosenList,
+        columns,
+        state: {
+          pagination,
+          globalFilter,
+          sorting,
+        },
+        getSortedRowModel: getSortedRowModel(),
+        getCoreRowModel: getCoreRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        onSortingChange: setSorting,
+        onPaginationChange: setPagination,
+        onGlobalFilterChange: setGlobalFilter,
+      });
+  const prodiOptions = prodiList.map((prodi) => ({
+    value: prodi.id,
+    label: `${prodi.name} - ${prodi.faculty?.name}`,
+  }))
   return (
     <section className="section">
       <div className="section-header">
@@ -221,248 +376,140 @@ const DosenPage = () => {
                 </button>
                 <div className="collapse" id="collapseEditDosen">
                   <div className="card card-body">
-                    <form onSubmit={handleAddNewDosen} method="POST">
-                      <div className="row">
-                        <div className="form-group col-md-6">
-                          <label>Nama</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="name"
-                            placeholder="Masukan Nama Dosen"
-                            value={newDosen.name}
-                            onChange={handleNewDosenChange}
-                          />
-                        </div>
-                        <div className="form-group col-md-6">
-                          <label>Email</label>
-                          <input
-                            type="email"
-                            className="form-control"
-                            name="email"
-                            placeholder="Masukan Email Dosen"
-                            value={newDosen.email}
-                            onChange={handleNewDosenChange}
-                          />
-                        </div>
-                        <div className="form-group col-md-6">
-                          <label>Program Studi</label>
-                          <select
-                            className="form-control"
-                            name="majorId"
-                            value={newDosen.majorId}
-                            onChange={handleNewDosenChange}
-                          >
-                            <option value="">---Pilih Prodi---</option>
-                            {prodiList.map((prodi) => (
-                              <option key={prodi.id} value={prodi.id}>
-                                {prodi.name} ({prodi.faculty?.name})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
 
-                        <div className="form-group col-md-6">
-                          <label>NIP</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="lectureNumber"
-                            value={newDosen.lectureNumber}
-                            onChange={handleNewDosenChange}
-                          />
-                        </div>
-                        <div className="form-group col-md-3">
-                          <label>Jabatan</label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            name="position"
-                            placeholder="Masukan Jabatan Dosen"
-                            value={newDosen.position}
-                            onChange={handleNewDosenChange}
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <button type="submit" className="btn btn-primary">
-                          Simpan
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-danger"
-                          data-toggle="collapse"
-                          data-target="#collapseEditMahasiswa"
-                        >
-                          Batal
-                        </button>
-                      </div>
-                    </form>
+                     <AddForm
+                      onSubmit= {handleAddNewDosen}
+                      collapseTargetId="collapseEditDosen"
+                      submitText="Simpan"
+                      cancelText="Batal"
+                      fields={[
+                        {
+                          label: "Nama",
+                          name: "name",
+                          type: "text", //Atur type menjadi 'text'
+                          value: newDosen.name,
+                          placeholder: "Masukkan Nama Dosen",
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewDosenChange(e),
+                        },
+                        {
+                          label: "Email",
+                          name: "email",
+                          type: "text",
+                          value: newDosen.email,
+                          placeholder: "Masukkan Nama Email",
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewDosenChange(e),
+                        },
+                        {
+                          
+                          label: "Program Studi",
+                          name: "majorId",
+                          type: "select",
+                          value: newDosen.majorId,
+                          options: prodiOptions,
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewDosenChange(e),
+                        },
+                         {
+                          label: "Jabatan",
+                          name: "position",
+                          type: "text", 
+                          value: newDosen.position,
+                          placeholder: "Masukkan Jabatan",
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewDosenChange(e),
+                        },
+                         {
+                          label: "NIP",
+                          name: "lectureNumber",
+                          type: "number",
+                          value: newDosen.lectureNumber,
+                          placeholder: "Masukkan NIP",
+                          gridClass: "col-md-3",
+                          onChange: (e: any) => handleNewDosenChange(e),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
                 <div className="table-responsive">
-                  <table className="table table-striped" id="table-1">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Nama</th>
-                        <th>Email</th>
-                        <th>Fakultas</th>
-                        <th>Program Studi</th>
-                        <th>NIP</th>
-                        <th>Jabatan</th>
-                        <th>Dibuat pada</th>
-                        <th>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Data dummy, bisa diganti dengan map dari state/props */}
-                      {dosenList.map((dosen, index) => (
-                        <tr key={dosen.id ?? `new-${index}`}>
-                          <td>{index + 1}</td>
-                          <td>{dosen.name}</td>
-                          <td>{dosen.email}</td>
-                          <td>{dosen.major?.faculty?.name}</td>
-                          <td>{dosen.major?.name}</td>
-                          <td>{dosen.lectureNumber}</td>
-                          <td>{dosen.position}</td>
-                          <td>
-                            {new Date(dosen.createdAt).toLocaleDateString(
-                              "id-ID",
-                              {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              },
-                            )}
-                          </td>
-                          <td>
-                            <a
-                              href="#"
-                              className="btn btn-icon btn-primary"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openEditModal(dosen);
-                              }}
-                            >
-                              <i className="far fa-edit"></i>
-                            </a>
-                            <a
-                              href="#"
-                              className="btn btn-icon btn-danger"
-                              onClick={() => handleDelete(dosen.id)}
-                            >
-                              <i className="fa fa-trash"></i>
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <LoadingSpinner isLoading={loading} />
+                    <TableToolbar
+                        globalFilter={globalFilter}
+                        setGlobalFilter={setGlobalFilter}
+                        pageSize={pagination.pageSize}
+                        setPageSize={(size) =>
+                          setPagination((old) => ({ ...old, pageSize: size }))
+                        }
+                     />
+                    <DataTable table={table} />
+                    <TablePagination table={table} />
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      {isEditModalOpen && (
-        <div
-          className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <form onSubmit={handleSave}>
-                <div className="modal-header">
-                  <h5 className="modal-title">Edit Program Dosen</h5>
-                  <button
-                    type="button"
-                    className="close"
-                    onClick={closeEditModal}
-                  >
-                    <span>&times;</span>
-                  </button>
-                </div>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label>Nama Dosen</label>
-                    <input
-                      type="text"
-                      name="name"
-                      className="form-control"
-                      value={selectedDosen.name}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Email Dosen</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="form-control"
-                      value={selectedDosen.email}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Program studi</label>
-                    <select
-                      className="form-control"
-                      name="majorId"
-                      value={selectedDosen.majorId}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option>---Pilih Program Studi---</option>
-                      {prodiList.map((prodi) => (
-                        <option key={prodi.id} value={prodi.id}>
-                          {prodi.name} ({prodi.faculty?.name})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>NIP</label>
-                    <input
-                      type="number"
-                      name="lectureNumber"
-                      className="form-control"
-                      value={selectedDosen.lectureNumber}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Jabatan</label>
-                    <input
-                      type="text"
-                      name="position"
-                      className="form-control"
-                      value={selectedDosen.position}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={closeEditModal}
-                  >
-                    Batal
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Simpan
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+          <ModalEditForm
+            title="Edit Data Mahasiswa"
+                    isOpen={isEditModalOpen}
+                    onClose={closeEditModal}
+                    onSubmit={handleSave}
+                    fields={[
+                      {
+                        label: "Nama",
+                        name: "name",
+                        type: "text",
+                        value: selectedDosen.name || "",
+                        placeholder: "Masukkan Nama Mahasiswa",
+                        onChange: (e: any) => handleInputChange(e), //panggil fungi untuk deteksi perubahan pada feld form
+                      },
+                      {
+                        label: "Email",
+                        name: "email",
+                        type: "text",
+                        value: selectedDosen.email || "",
+                        placeholder: "Masukkan Email Mahasiswa",
+                        onChange: (e: any) => handleInputChange(e)
+                      },
+                      {
+                        label: "Pilih Program Studi",
+                        name: "majorId",
+                        type: "select",
+                        value: selectedDosen.majorId || "",
+                        options: prodiOptions,
+                        onChange: (e: any) => handleInputChange(e)
+                      },
+                       {
+                        label: "Jabatan",
+                        name: "position",
+                        type: "text",
+                        value: selectedDosen.position || "",
+                        placeholder: "Masukkan Angkatan Mahasiswa",
+                        onChange: (e: any) => handleInputChange(e)
+                      },
+                      {
+                        label: "NIP Dosen",
+                        name: "lectureNumber",
+                        type: "number",
+                        value: selectedDosen.lectureNumber || "",
+                        placeholder: "Masukkan NIP Dosen",
+                        onChange: (e: any) => handleInputChange(e),
+                      },
+              ]}
+            />
+
+              <ModalConfirmDelete
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => {
+                      setIsDeleteModalOpen(false);
+                      setDeleteTargetId(null);
+                    }}
+                    onConfirm={handleDelete}
+                    title="Delete"
+                    message="Apakah anda yakin ingin menghapus data ini?"
+                  />
     </section>
   );
 };

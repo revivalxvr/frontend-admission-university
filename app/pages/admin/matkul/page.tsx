@@ -1,8 +1,24 @@
 "use client";
-import React, { useState, useEffect } from "react";
-// import MyBarChart from '../../../components/myBarChart';
-import api from "@/app/lib/axiosInstance";
+import React, { useState, useEffect, useMemo } from "react";
 
+import api from "@/app/lib/axiosInstance";
+import {
+  ColumnDef,
+  getSortedRowModel,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+import DataTable from "@/app/components/table/DataTable";
+import TableToolbar from "@/app/components/table/TableToolbar";
+import TablePagination from "@/app/components/table/TablePagination";
+import AddForm from "@/app/components/form/AddForm";
+import ModalEditForm from "@/app/components/form/EditForm";
+import { useToast } from "@/app/components/context/ToastContext";
+import ModalConfirmDelete from "@/app/components/modal/ModalConfirmDelete";
+import LoadingSpinner from "@/app/components/loading/LoadingSpinner";
 interface Matkul {
   id: string;
   name: string;
@@ -65,7 +81,24 @@ const deleteMatkul = async (id: string) => {
 //end of API services
 const MatkulPage = () => {
   //buat state
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  //state untuk delete data
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  //end of state untuk delete
+
+  // State untuk search, sorting, pagination
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const [selectedMatkul, setSelectedMatkul] = useState<Partial<Matkul>>({});
 
@@ -87,32 +120,42 @@ const MatkulPage = () => {
   }, []);
 
   const fetchMatkul = async () => {
+      setLoading(true);
     try {
       const data = await getMatkul();
       setMatkulList(data);
     } catch (error) {
       console.log("Gagal mengambil data matkul ==", error);
+    } finally {
+      setLoading(false);
     }
   };
   const fetchDosen = async () => {
+      setLoading(true);
     try {
       const data = await getDosen();
       setDosenList(data);
     } catch (error) {
       console.log("Gagal mengambil data dosen ==", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAdldNewMatkul = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddNewMatkul = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+      setLoading(true);
     try {
       const res = await addMatkul(newMatkul);
       setMatkulList((prev) => [...prev, res]);
       setNewMatkul({ name: "", code: "", lectureId: "", credits: 0 });
-      // closeEditModal();
+      showToast("successfully", "success");
       fetchMatkul();
     } catch (error) {
+      showToast("terjadi kesalahan", "error");
       console.log("Gagal menambahkan matkul ==", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -132,20 +175,25 @@ const MatkulPage = () => {
   const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedMatkul.id) return;
+      setLoading(true);
     try {
       const res = await updateMatkul(selectedMatkul.id, {
-        name: selectedMatkul.name ?? '',
-        code: selectedMatkul.code ?? '',
-        lectureId: selectedMatkul.lectureId ?? '',
+        name: selectedMatkul.name ?? "",
+        code: selectedMatkul.code ?? "",
+        lectureId: selectedMatkul.lectureId ?? "",
         credits: selectedMatkul.credits ?? 0,
       });
       setMatkulList((prev) =>
         prev.map((matkul) => (matkul.id === res.id ? res : matkul)),
       );
-     
+       closeEditModal();
+      showToast("successfully", "success");
       fetchMatkul();
     } catch (error) {
+      showToast("terjadi kesalahan", "error");
       console.log("Gagal mengupdate matkul ==", error);
+    } finally {
+      setLoading(false);
     }
   };
   const openEditModal = (matkul: Matkul) => {
@@ -156,12 +204,18 @@ const MatkulPage = () => {
     setSelectedMatkul({});
     setIsEditModalOpen(false);
   };
-  const handleDelete = async (id: string) => {
-    if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
+  const openDeleteModal = (id: string) => {
+    setDeleteTargetId(id);
+    setIsDeleteModalOpen(true);
+  };
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+    const id = deleteTargetId;
+      setLoading(true);
     try {
       await deleteMatkul(id);
       setDosenList((prev) => prev.filter((dosen) => dosen.id !== id));
-      alert("Data matkul berhasil dihapus!");
+      showToast("successfully", "success");
       fetchMatkul();
     } catch (error: any) {
       //cek error nya apakah karena  forekey constraint
@@ -169,14 +223,114 @@ const MatkulPage = () => {
       //cek apa pesan error apa yang di kirim dari backend contoh {"code": "P2003", "message": "Foreign key violation"}
       const errorString = JSON.stringify(errorData || "").toLowerCase();
       if (errorData?.code === "P2003") {
-        alert(
-          "Tidak dapat menghapus data karena masih terhubung dengan data lain",
-        );
+        showToast("data terhubung ke data lain", "error");
         console.log("Gagal menghapus matkul ==", errorString);
         console.log("Gagal menghapus matkul ==", errorData);
+      } else {
+        showToast("terjadi kesalahan", "error");
+        console.log("Gagal menghapus matkul ==", error);
       }
+      
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteTargetId(null);
+      setLoading(false);
     }
   };
+  const columns = useMemo<ColumnDef<Matkul>[]>(
+    () => [
+      {
+        accessorFn: (row, index) => index + 1,
+        header: "#",
+      },
+      {
+        accessorKey: "name",
+        header: "Nama",
+      },
+      {
+        accessorKey: "code",
+        header: "Kode Mata Kuliah",
+      },
+      {
+        accessorKey: "lecture.major.faculty.name",
+        header: "Fakultas",
+      },
+      {
+        accessorKey: "lecture.major.name",
+        header: "Program Studi",
+      },
+      {
+        accessorKey: "lecture.name",
+        header: "Dosen",
+      },
+      {
+        accessorKey: "credits",
+        header: "Total SKS",
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Dibuat pada",
+        cell: (info) =>
+          new Date(info.getValue() as string).toLocaleDateString("id-ID", {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+          }),
+      },
+      {
+        header: "Aksi",
+        cell: ({ row }) => {
+          const matkul = row.original; // data asli baris ini
+          return (
+            <>
+              <a
+                href="#"
+                className="btn btn-icon btn-primary m-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openEditModal(matkul); // Mengirim objek prodi ke modal edit
+                }}
+              >
+                <i className="far fa-edit"></i>
+              </a>
+              <a
+                href="#"
+                className="btn btn-icon btn-danger"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openDeleteModal(matkul.id);
+                }}
+              >
+                <i className="fa fa-trash"></i>
+              </a>
+            </>
+          );
+        },
+      },
+    ],
+    [],
+  );
+  const table = useReactTable({
+    data: matkulList,
+    columns,
+    state: {
+      pagination,
+      globalFilter,
+      sorting,
+    },
+    getSortedRowModel: getSortedRowModel(),
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onGlobalFilterChange: setGlobalFilter,
+  });
+  const donsenOptions = dosenList.map((dosen) => ({
+    value: dosen.id,
+    label: `${dosen.name} - (${dosen.major.faculty.name})`,
+  }));
   return (
     <section className="section">
       <div className="section-header">
@@ -208,219 +362,112 @@ const MatkulPage = () => {
                 </button>
                 <div className="collapse" id="collapseEditMatkul">
                   <div className="card card-body">
-                    <form onSubmit={handleAdldNewMatkul}>
-                      <div className="form-group">
-                        <label>Dosen</label>
-                        <select
-                          className="form-control"
-                          onChange={handleNewChange}
-                          value={newMatkul.lectureId}
-                          name="lectureId"
-                          required
-                        >
-                          <option value="">Pilih Dosen</option>
-                          {dosenList.map((dosen) => (
-                            <option key={dosen.id} value={dosen.id}>
-                              {dosen.name} ({dosen.major?.name}) & (
-                              {dosen.major.faculty.name})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Nama Mata Kuliah</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Nama Mata Kuliah"
-                          name="name"
-                          onChange={handleNewChange}
-                          value={newMatkul.name}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Kode Mata Kuliah</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Kode Mata Kuliah"
-                          name="code"
-                          onChange={handleNewChange}
-                          value={newMatkul.code}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Total SKS</label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          placeholder="Total SKS"
-                          name="credits"
-                          onChange={handleNewChange}
-                          value={newMatkul.credits}
-                          required
-                        />
-                      </div>
-                      <button type="submit" className="btn btn-primary">
-                        Simpan
-                      </button>
-                    </form>
+                     <AddForm
+                      onSubmit={handleAddNewMatkul}
+                      collapseTargetId="collapseEditMatkul"
+                      submitText="Simpan"
+                      cancelText="Batal"
+                      fields={[
+                        {
+                          label: "Nama Mata Kuliah",
+                          name: "name",
+                          type: "text", //Atur type menjadi 'text'
+                          value: newMatkul.name,
+                          placeholder: "Masukkan Nama Mata Kuliah",
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewChange(e),
+                        },
+                        {
+                          label: "Kode Mata Kuliah",
+                          name: "code",
+                          type: "text",
+                          value: newMatkul.code,
+                          placeholder: "Masukkan Kode Mata Kuliah",
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewChange(e),
+                        },
+                        {
+                          label: "Total SKS",
+                          name: "credits",
+                          type: "number",
+                          value: newMatkul.credits,
+                          placeholder: "Masukkan Total SKS",
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewChange(e),
+                        },
+                        {
+                          label: "Dosen",
+                          name: "lectureId",
+                          type: "select",
+                          value: newMatkul.lectureId,
+                          options: donsenOptions,
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewChange(e),
+                        }
+                          
+                      ]}
+                    />
                   </div>
                 </div>
                 <div className="table-responsive">
-                  <table className="table table-striped" id="table-1">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Fakultas</th>
-                        <th>Program Studi</th>
-                        <th>Dosen</th>
-                        <th>Kode Mata Kuliah</th>
-                        <th>Nama</th>
-                        <th>Total SKS</th>
-                        <th>Dibuat Pada</th>
-                        <th>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {matkulList.map((matkul, index) => (
-                        <tr key={matkul.id}>
-                          <td>{index + 1}</td>
-                          <td>{matkul.lecture?.major?.faculty?.name ?? "-"}</td>
-                          <td>{matkul.lecture?.major?.name ?? "-"}</td>
-                          <td>{matkul.lecture?.name ?? "-"}</td>
-                          <td>{matkul.code}</td>
-                          <td>{matkul.name}</td>
-                          
-                          <td>
-                            {new Date(matkul.createdAt).toLocaleString(
-                              "id-ID",
-                              {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              },
-                            )}
-                          </td>
-                          <td>
-                            <a
-                              href="#"
-                              className="btn btn-icon btn-primary"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openEditModal(matkul);
-                              }}
-                            >
-                              <i className="far fa-edit"></i>
-                            </a>
-                            <a
-                              href="#"
-                              className="btn btn-icon btn-danger"
-                              onClick={() => handleDelete(matkul.id)}
-                            >
-                              <i className="fa fa-trash"></i>
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                   <TableToolbar
+                    globalFilter={globalFilter}
+                    setGlobalFilter={setGlobalFilter}
+                    pageSize={pagination.pageSize}
+                    setPageSize={(size) =>
+                      setPagination((old) => ({ ...old, pageSize: size }))
+                    }
+                  />
+                  <DataTable table={table} />
+                   <TablePagination table={table} />
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      {isEditModalOpen && (
-        <div
-          className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <form onSubmit={handleSaveEdit}>
-                <div className="modal-header">
-                  <h5 className="modal-title">Edit Program Dosen</h5>
-                  <button
-                    type="button"
-                    className="close"
-                    onClick={closeEditModal}
-                  >
-                    <span>&times;</span>
-                  </button>
-                </div>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label>Dosen</label>
-                    <select
-                      className="form-control"
-                      onChange={handleInputChange}
-                      value={selectedMatkul.lectureId}
-                      name="lectureId"
-                      required
-                    >
-                      <option value="">Pilih Dosen</option>
-                      {dosenList.map((dosen) => (
-                        <option key={dosen.id} value={dosen.id}>
-                          {dosen.name} ({dosen.major?.name}) & (
-                          {dosen.major.faculty.name})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Nama Mata Kuliah</label>
-                    <input
-                      type="text"
-                      name="name"
-                      className="form-control"
-                      value={selectedMatkul.name}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <div className="form-group">
-                      <label>Code Mata Kuliah</label>
-                      <input
-                        type="text"
-                        name="code"
-                        className="form-control"
-                        value={selectedMatkul.code}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>SKS</label>
-                    <input
-                      type="number"
-                      name="credits"
-                      className="form-control"
-                      value={selectedMatkul.credits}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={closeEditModal}
-                  >
-                    Batal
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Simpan
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+       <ModalEditForm
+        title="Edit Data Mata Kuliah"
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        onSubmit={handleSaveEdit}
+        fields={[
+          {
+            label: "Nama",
+            name: "name",
+            type: "text",
+            value: selectedMatkul.name || "",
+            placeholder: "Masukkan Nama Mata Kuliah",
+            onChange: (e: any) => handleInputChange(e), //panggil fungi untuk deteksi perubahan pada feld form
+          },
+          {
+            label: "Code",
+            name: "code",
+            type: "text",
+            value: selectedMatkul.code || "",
+            placeholder: "Masukkan Code Mata Kuliah",
+            onChange: (e: any) => handleInputChange(e),
+          },
+          {
+            label: "Dosen",
+            name: "lectureId",
+            type: "select",
+            value: selectedMatkul.lectureId || "",
+            options: donsenOptions,
+            onChange: (e: any) => handleInputChange(e),
+          }
+        ]}
+      />
+       <ModalConfirmDelete
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteTargetId(null);
+        }}
+        onConfirm={handleDelete}
+        title="Delete"
+        message="Apakah anda yakin ingin menghapus data ini?"
+      />
     </section>
   );
 };

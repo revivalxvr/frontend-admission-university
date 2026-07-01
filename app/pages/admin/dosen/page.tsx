@@ -452,7 +452,7 @@ const DosenPage = () => {
         </div>
       </div>
           <ModalEditForm
-            title="Edit Data Mahasiswa"
+            title="Edit Data Dosen"
                     isOpen={isEditModalOpen}
                     onClose={closeEditModal}
                     onSubmit={handleSave}

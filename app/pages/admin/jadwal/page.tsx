@@ -1,8 +1,24 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 // import MyBarChart from '../../../components/myBarChart';
 import api from "@/app/lib/axiosInstance";
-
+import {
+  ColumnDef,
+  getSortedRowModel,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  SortingState,
+  useReactTable,
+} from "@tanstack/react-table";
+import DataTable from "@/app/components/table/DataTable";
+import TableToolbar from "@/app/components/table/TableToolbar";
+import TablePagination from "@/app/components/table/TablePagination";
+import AddForm from "@/app/components/form/AddForm";
+import ModalEditForm from "@/app/components/form/EditForm";
+import { useToast } from "@/app/components/context/ToastContext";
+import ModalConfirmDelete from "@/app/components/modal/ModalConfirmDelete";
+import LoadingSpinner from "@/app/components/loading/LoadingSpinner";
 interface Jadwal {
   id: string;
   name: string;
@@ -88,7 +104,24 @@ const deleteData = async (id: string) => {
 
 const JadwalPage = () => {
   //state
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  //state untuk delete data
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  //end of state untuk delete
+
+  // State untuk search, sorting, pagination
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const [selectedJadwal, setSelectedJadwal] = useState<Partial<Jadwal>>({});
 
@@ -121,8 +154,10 @@ const JadwalPage = () => {
         classId: "",
         courseId: "",
       });
+      showToast("successfully", "success");
       fetchJadwal();
     } catch (error) {
+      showToast("terjadi kesalahan", "error");
       console.log("Gagal menambahkan jadwal ==", error);
     }
   };
@@ -135,27 +170,36 @@ const JadwalPage = () => {
   }, []);
 
   const fetchJadwal = async () => {
+    setLoading(true);
     try {
       const data = await getJadwal();
       setJadwalList(data);
     } catch (error) {
       console.log("Gagal mengambil data jadwal ==", error);
+    } finally {
+      setLoading(false);
     }
   };
   const fetchKelas = async () => {
+    setLoading(true);
     try {
       const data = await getKelas();
       setKelasList(data);
     } catch (error) {
       console.log("Gagal mengambil data kelas ==", error);
+    } finally {
+      setLoading(false);
     }
   };
   const fetchMatkul = async () => {
+    setLoading(true);
     try {
       const data = await getMatkul();
       setMatkulList(data);
     } catch (error) {
       console.log("Gagal mengambil data matkul ==", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,16 +219,21 @@ const JadwalPage = () => {
       setNewJadwal((prev) => ({ ...prev, [name]: value }));
     }
   };
-  const handleDelete = async (id: string) => {
-    if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
+  const handleDelete = async () => {
+    if (!deleteTargetId) return;
+    const id = deleteTargetId;
     try {
       await deleteData(id);
       setJadwalList((prev) => prev.filter((jadwal) => jadwal.id !== id));
-      alert("Data jadwal berhasil dihapus!");
+
+      showToast("successfully", "success");
       fetchJadwal();
     } catch (error) {
       console.log("Gagal menghapus jadwal ==", error);
-      alert("Gagal menghapus jadwal");
+      showToast("terjadi kesalahan", "error");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setDeleteTargetId(null);
     }
   };
 
@@ -195,6 +244,10 @@ const JadwalPage = () => {
   const closeEditModal = () => {
     setSelectedJadwal({});
     setIsEditModalOpen(false);
+  };
+  const openDeleteModal = (id: string) => {
+    setDeleteTargetId(id);
+    setIsDeleteModalOpen(true);
   };
 
   //function untuk edit modal(update data)
@@ -213,9 +266,10 @@ const JadwalPage = () => {
         prev.map((jadwal) => (jadwal.id === res.id ? res : jadwal)),
       );
       closeEditModal();
+      showToast("successfully", "success");
       fetchJadwal();
     } catch (error) {
-      alert("Gagal mengupdate jadwal");
+      showToast("terjadi kesalahan", "error");
       console.log("Gagal mengupdate jadwal ==", error);
     }
   };
@@ -224,11 +278,11 @@ const JadwalPage = () => {
   ) => {
     const { name, value } = e.target;
     setSelectedJadwal((prev) => {
-        let update = { ...prev, [name]: value };
-        if (name === "timeStart") {
-            update.day = getDayFromDate(value);
-        }
-        return update;
+      let update = { ...prev, [name]: value };
+      if (name === "timeStart") {
+        update.day = getDayFromDate(value);
+      }
+      return update;
     });
   };
 
@@ -251,7 +305,162 @@ const JadwalPage = () => {
     return date.toLocaleString("id-ID", { weekday: "long" });
   }
   //end of function format waktu
+  const columns = useMemo<ColumnDef<any>[]>(
+    () => [
+      {
+        accessorFn: (row, index) => index + 1,
+        header: "#",
+      },
+      {
+        id: "courseName",
+        header: "Mata Kuliah",
+        accessorFn: (row) => row.course?.name || "-",
+      },
+      {
+        id: "className",
+        header: "Kelas",
+        accessorFn: (row) => row.class?.name || "-",
+      },
+      {
+        id: "majorName",
+        header: "Program Studi",
+        accessorFn: (row) => row.class?.major?.name || "-",
+      },
+      {
+        accessorKey: "day",
+        header: "Hari",
+      },
+      {
+        accessorKey: "timeStart",
+        header: "Tanggal",
+        cell: (info) => {
+          const val = info.getValue() as string;
+          return val
+            ? new Date(val).toLocaleDateString("id-ID", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })
+            : "-";
+        },
+      },
+      {
+        id: "waktuMulai",
+        accessorKey: "timeStart",
+        header: "Waktu Mulai",
+        cell: (info) => {
+          const val = info.getValue() as string;
+          return val
+            ? new Date(val).toLocaleTimeString("id-ID", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })
+            : "-";
+        },
+      },
+      {
+        accessorKey: "timeEnd",
+        header: "Waktu Berakhir",
+        cell: (info) => {
+          const val = info.getValue() as string;
+          return val
+            ? new Date(val).toLocaleTimeString("id-ID", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })
+            : "-";
+        },
+      },
+      {
+        id: "facultyName",
+        header: "Fakultas",
+        accessorFn: (row) => row.class?.major?.faculty?.name || "-",
+      },
+      {
+        id: "lectureName",
+        header: "Dosen",
+        accessorFn: (row) => row.course?.lecture?.name || "-",
+      },
+      {
+        id: "yearName",
+        header: "Tahun Ajaran",
+        accessorFn: (row) => row.class?.year?.name || "-",
+      },
 
+      {
+        accessorKey: "createdAt",
+        header: "Dibuat Pada",
+        cell: (info) => {
+          const val = info.getValue() as string;
+          return val
+            ? new Date(val).toLocaleDateString("id-ID", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })
+            : "-";
+        },
+      },
+      {
+        header: "Aksi",
+        cell: ({ row }) => {
+          const jadwal = row.original; // Mengambil objek asli per baris
+          return (
+            <>
+              <a
+                href="#"
+                className="btn btn-icon btn-primary m-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openEditModal(jadwal); // Membuka modal edit
+                }}
+              >
+                <i className="far fa-edit"></i>
+              </a>
+              <a
+                href="#"
+                className="btn btn-icon btn-danger"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openDeleteModal(jadwal.id); // Direkomendasikan panggil pembungkus modal konfirmasi Anda
+                }}
+              >
+                <i className="fa fa-trash"></i>
+              </a>
+            </>
+          );
+        },
+      },
+    ],
+    [],
+  );
+  const table = useReactTable({
+    data: jadwalList,
+    columns,
+    state: {
+      pagination,
+      globalFilter,
+      sorting,
+    },
+    getSortedRowModel: getSortedRowModel(),
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onGlobalFilterChange: setGlobalFilter,
+  });
+  const kelasOptions = kelasList.map((kelas) => ({
+    value: String(kelas.id),
+    label: kelas.name,
+  }));
+
+  const matkulOptions = matkulList.map((matkul) => ({
+    value: String(matkul.id),
+    label: matkul.name,
+  }));
   return (
     <section className="section">
       <div className="section-header">
@@ -283,268 +492,147 @@ const JadwalPage = () => {
                 </button>
                 <div className="collapse" id="collapseEditMatkul">
                   <div className="card card-body">
-                    <form onSubmit={handleAddNewJadwal}>
-                      <div className="form-group">
-                        <label htmlFor="fakultas">Kelas</label>
-                        <select
-                          className="form-control"
-                          name="classId"
-                          value={newJadwal.classId}
-                          onChange={handleNewChange}
-                          required
-                        >
-                          <option value="">-- Pilih Kelas --</option>
-                          {kelasList.map((kelas) => (
-                            <option key={kelas.id} value={kelas.id}>
-                              {kelas.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="prodi">Mata Kuliah</label>
-                        <select
-                          className="form-control"
-                          id="prodi"
-                          name="courseId"
-                          value={newJadwal.courseId}
-                          onChange={handleNewChange}
-                          required
-                        >
-                          <option value="">-- Pilih Mata Kuliah --</option>
-                          {matkulList.map((matkul) => (
-                            <option key={matkul.id} value={matkul.id}>
-                              {matkul.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Tanggal dan Jam Mulai</label>
-                        <input
-                          type="datetime-local"
-                          className="form-control"
-                          name="timeStart"
-                          value={newJadwal.timeStart}
-                          onChange={handleNewChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Tanggal dan Jam Berakhir</label>
-                        <input
-                          type="datetime-local"
-                          className="form-control"
-                          name="timeEnd"
-                          value={newJadwal.timeEnd}
-                          onChange={handleNewChange}
-                          required
-                        />
-                      </div>
-                      <div className="form-group">
-                        <label>Hari</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          name="day"
-                          placeholder="Hari"
-                          value={newJadwal.day}
-                          onChange={handleNewChange}
-                          readOnly
-                        />
-                      </div>
-                      <button type="submit" className="btn btn-primary">
-                        Simpan
-                      </button>
-                    </form>
+                    <AddForm
+                      onSubmit={handleAddNewJadwal}
+                      collapseTargetId="collapseEditMatkul" // Sesuaikan dengan ID target collapse halaman Jadwal Anda
+                      submitText="Simpan"
+                      cancelText="Batal"
+                      fields={[
+                        {
+                          label: "Kelas",
+                          name: "classId",
+                          type: "select",
+                          gridClass: "col-md-6", // Berdampingan dengan Mata Kuliah
+                          value: newJadwal.classId || "",
+                          placeholder: "-- Pilih Kelas --",
+                          options: kelasOptions,
+                          onChange: (e: any) => {
+                            const val = e?.target ? e.target.value : e?.value;
+                            handleNewChange({
+                              target: { name: "classId", value: val },
+                            } as any);
+                          },
+                        },
+                        {
+                          label: "Mata Kuliah",
+                          name: "courseId",
+                          type: "select",
+                          gridClass: "col-md-6", // Berdampingan dengan Kelas
+                          value: newJadwal.courseId || "",
+                          placeholder: "-- Pilih Mata Kuliah --",
+                          options: matkulOptions,
+                          onChange: (e: any) => {
+                            const val = e?.target ? e.target.value : e?.value;
+                            handleNewChange({
+                              target: { name: "courseId", value: val },
+                            } as any);
+                          },
+                        },
+                        {
+                          label: "Tanggal dan Jam Mulai",
+                          name: "timeStart",
+                          type: "datetime-local", // Tipe datetime HTML5 bawaan Anda
+                          gridClass: "col-md-6", // Berdampingan dengan Jam Berakhir
+                          value: newJadwal.timeStart || "",
+                          onChange: (e: any) => handleNewChange(e),
+                          onClick: (e: any) => {
+                            e.currentTarget.showPicker();
+                          },
+                        },
+                        {
+                          label: "Tanggal dan Jam Berakhir",
+                          name: "timeEnd",
+                          type: "datetime-local",
+                          gridClass: "col-md-6", // Berdampingan dengan Jam Mulai
+                          value: newJadwal.timeEnd || "",
+                          onChange: (e: any) => handleNewChange(e),
+                          
+                          onClick: (e: any) => {
+                            e.currentTarget.showPicker();
+                          },
+                        },
+                        {
+                          label: "Hari",
+                          name: "day",
+                          type: "text",
+                          gridClass: "col-md-6", 
+                          value: newJadwal.day || "",
+                          placeholder: "Hari otomatis terisi",
+                          disabled: true, // readonly karena diisi otomatis
+                          onChange: (e: any) => handleNewChange(e),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
                 <div className="table-responsive">
-                  <table className="table table-striped" id="table-1">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Fakultas</th>
-                        <th>Program Studi</th>
-                        <th>Mata Kuliah</th>
-                        <th>Kelas</th>
-                        <th>Dosen</th>
-                        <th>Tahun Ajaran</th>
-                        <th>Hari</th>
-                        <th>Tanggal</th>
-                        <th>Waktu Mulai</th>
-                        <th>Waktu Berakhir</th>
-                        <th>Dibuat Pada</th>
-                        <th>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {jadwalList.map((jadwal, index) => (
-                        <tr key={jadwal.id}>
-                          <td>{index + 1}</td>
-                          <td>{jadwal.class?.major?.faculty?.name}</td>
-                          <td>{jadwal.class?.major?.name}</td>
-                          <td>{jadwal.course?.name}</td>
-                          <td>{jadwal.class?.name}</td>
-                          <td>{jadwal.course?.lecture?.name}</td>
-                          <td>{jadwal.class?.year?.name}</td>
-                          <td>{jadwal.day}</td>
-                          <td>
-                            {new Date(jadwal.timeStart).toLocaleString(
-                              "id-ID",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              },
-                            )}
-                          </td>
-                          <td>
-                            {new Date(jadwal.timeStart).toLocaleString(
-                              "id-ID",
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: false,
-                              },
-                            )}
-                          </td>
-                          <td>
-                            {new Date(jadwal.timeEnd).toLocaleString("id-ID", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: false,
-                            })}
-                          </td>
-
-                          <td>
-                            {new Date(jadwal.createdAt).toLocaleString(
-                              "id-ID",
-                              {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              },
-                            )}
-                          </td>
-                          <td>
-                            <a href="#" className="btn btn-icon btn-primary"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                openEditModal(jadwal);
-                              }}
-                            >
-                              <i className="far fa-edit"></i>
-                            </a>
-                            <a
-                              href="#"
-                              className="btn btn-icon btn-danger"
-                              onClick={() => handleDelete(jadwal.id)}
-                            >
-                              <i className="fa fa-trash"></i>
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <LoadingSpinner isLoading={loading} />
+                  <TableToolbar
+                    globalFilter={globalFilter}
+                    setGlobalFilter={setGlobalFilter}
+                    pageSize={pagination.pageSize}
+                    setPageSize={(size) =>
+                      setPagination((old) => ({ ...old, pageSize: size }))
+                    }
+                  />
+                  <DataTable table={table} />
+                  <TablePagination table={table} />
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      {isEditModalOpen && (
-        <div
-          className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <form onSubmit={handleSaveEdit}>
-                <div className="modal-header">
-                  <h5 className="modal-title">Edit Jadwal</h5>
-                  <button
-                    type="button"
-                    className="close"
-                    onClick={closeEditModal}
-                  >
-                    <span>&times;</span>
-                  </button>
-                </div>
-                <div className="modal-body">
-                  <div className="form-group">
-                    <label htmlFor="prodi">Mata Kuliah</label>
-                    <select
-                      className="form-control"
-                      id="prodi"
-                      name="courseId"
-                      value={selectedJadwal.courseId}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">-- Pilih Mata Kuliah --</option>
-                      {matkulList.map((matkul) => (
-                        <option key={matkul.id} value={matkul.id}>
-                          {matkul.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Tanggal dan Jam Mulai</label>
-                    <input
-                      type="datetime-local"
-                      className="form-control"
-                      name="timeStart"
-                      value={formatForDateTimeLocal(
-                        selectedJadwal.timeStart ?? "",
-                      )}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Tanggal dan Jam Berakhir</label>
-                    <input
-                      type="datetime-local"
-                      className="form-control"
-                      name="timeEnd"
-                      value={formatForDateTimeLocal(selectedJadwal.timeEnd ?? "")}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                        <label>Hari</label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          name="day"
-                          placeholder="Hari"
-                          value={selectedJadwal.day}
-                          onChange={handleInputChange}
-                          readOnly
-                        />
-                      </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    onClick={closeEditModal}
-                  >
-                    Batal
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Simpan
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+    
+       <ModalEditForm
+        title="Edit Data Jadwal Kuliah"
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        onSubmit={handleSaveEdit}
+        fields={[
+          {
+            label: "Nama Mata Kuliah",
+            name: "name",
+            type: "select",
+            value: selectedJadwal.courseId|| "",
+            options: matkulOptions,
+            onChange: (e: any) => handleInputChange(e), //panggil fungi untuk deteksi perubahan pada feld form
+          },
+          {
+            label: "Tanggal dan Jam Mulai",
+            name: "timeStart",
+            type: "datetime-local",
+            value: formatForDateTimeLocal(selectedJadwal.timeStart ?? ""),
+            onChange: (e: any) => handleInputChange(e),
+          },
+          {
+            label: "Tanggal dan Jam Berakhir",
+            name: "timeEnd",
+            type: "datetime-local",
+            value: formatForDateTimeLocal(selectedJadwal.timeEnd ?? ""),
+            onChange: (e: any) => handleInputChange(e),
+          },
+          {
+            label: "Hari",
+            name: "day",
+            type: "text",
+            value: selectedJadwal.day || "",
+            placeholder: "Hari otomatis terisi",
+            disabled: true, // readonly karena diisi otomatis
+            onChange: (e: any) => handleInputChange(e),
+          },
+        ]}
+      />
+        <ModalConfirmDelete
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeleteTargetId(null);
+        }}
+        onConfirm={handleDelete}
+        title="Delete"
+        message="Apakah anda yakin ingin menghapus data ini?"
+      />
     </section>
   );
 };

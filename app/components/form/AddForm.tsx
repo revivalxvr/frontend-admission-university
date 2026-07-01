@@ -38,6 +38,7 @@ interface FieldConfig {
   disabled?: boolean;
   options?: SelectOption[];
   loadOptions?: (inputValue: string) => Promise<SelectOption[]>;
+  onClick?: (e: React.MouseEvent<HTMLInputElement>) => void;
 }
 
 interface DynamicFormProps {
@@ -148,6 +149,7 @@ const AddForm: React.FC<DynamicFormProps> = ({
               onChange={field.onChange}
               disabled={field.disabled}
               placeholder={field.placeholder}
+              onClick={field.onClick}
               required
             />
           )}

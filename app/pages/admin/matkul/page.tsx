@@ -410,6 +410,7 @@ const MatkulPage = () => {
                   </div>
                 </div>
                 <div className="table-responsive">
+                   <LoadingSpinner isLoading={loading} />
                    <TableToolbar
                     globalFilter={globalFilter}
                     setGlobalFilter={setGlobalFilter}

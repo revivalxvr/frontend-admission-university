@@ -1,34 +1,95 @@
 // app/components/AdminNavbar.tsx
-import React from 'react';
+"use client";
+import React from "react";
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
 
 const DosenNavbar = () => {
+  const router = useRouter();
+  const [email, setEmail] = useState<string | null>(null);
+  const [loginTimeAgo, setLoginTimeAgo] = useState<string>("");
+
+   useEffect(() => {
+    const storedEmail = Cookies.get("email") || null;
+    setEmail(storedEmail);
+    
+    //ambil waktu login dari cookie
+    let loginTime = Cookies.get("loginTime");
+    if (!loginTime) {
+        loginTime = new Date().toISOString();
+        Cookies.set("loginTime", loginTime);
+    }
+
+    //fungsi untuk update waktu relative
+    const updateTimeAgo = () => {
+      setLoginTimeAgo(dayjs(loginTime).fromNow());
+    };
+
+    updateTimeAgo(); //set awal
+    const interval = setInterval(updateTimeAgo, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+    const handleLogout = () => {
+    Object.keys(Cookies.get()).forEach(cookie => {
+      Cookies.remove(cookie);
+    });
+    router.push("/pages/auth/dosen/login");
+  }
   return (
     <nav className="navbar navbar-expand-lg main-navbar">
       <form className="form-inline mr-auto">
         <ul className="navbar-nav mr-3">
-          <li><a href="#" data-toggle="sidebar" className="nav-link nav-link-lg"><i className="fas fa-bars"></i></a></li>
+          <li>
+            <a href="#" data-toggle="sidebar" className="nav-link nav-link-lg">
+              <i className="fas fa-bars"></i>
+            </a>
+          </li>
         </ul>
       </form>
       <ul className="navbar-nav navbar-right">
-        <li className="dropdown dropdown-list-toggle"><a href="#" data-toggle="dropdown" className="nav-link nav-link-lg message-toggle beep"><i className="far fa-envelope"></i></a></li>
+        <li className="dropdown dropdown-list-toggle">
+          <a
+            href="#"
+            data-toggle="dropdown"
+            className="nav-link nav-link-lg message-toggle beep"
+          >
+            <i className="far fa-envelope"></i>
+          </a>
+        </li>
         <li className="dropdown">
-          <a href="#" data-toggle="dropdown" className="nav-link dropdown-toggle nav-link-lg nav-link-user">
-            <img alt="image" src="../../assets/img/avatar/avatar-1.png" className="rounded-circle mr-1" />
-            <div className="d-sm-none d-lg-inline-block">Hi, Ujang Maman</div>
+          <a
+            href="#"
+            data-toggle="dropdown"
+            className="nav-link dropdown-toggle nav-link-lg nav-link-user"
+          >
+            <img
+              alt="image"
+              src="../../assets/img/avatar/avatar-1.png"
+              className="rounded-circle mr-1"
+            />
+            <div className="d-sm-none d-lg-inline-block">Hi, {email}</div>
           </a>
           <div className="dropdown-menu dropdown-menu-right">
-            <div className="dropdown-title">Logged in 5 min ago</div>
+            <div className="dropdown-title">Logged in {loginTimeAgo}</div>
             <a href="features-profile.html" className="dropdown-item has-icon">
               <i className="far fa-user"></i> Profile
             </a>
-            <a href="features-activities.html" className="dropdown-item has-icon">
+            <a
+              href="features-activities.html"
+              className="dropdown-item has-icon"
+            >
               <i className="fas fa-bolt"></i> Activities
             </a>
             <a href="features-settings.html" className="dropdown-item has-icon">
               <i className="fas fa-cog"></i> Settings
             </a>
             <div className="dropdown-divider"></div>
-            <a href="#" className="dropdown-item has-icon text-danger">
+            <a href="#" className="dropdown-item has-icon text-danger" onClick={handleLogout}>
               <i className="fas fa-sign-out-alt"></i> Logout
             </a>
           </div>

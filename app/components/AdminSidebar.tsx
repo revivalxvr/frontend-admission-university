@@ -45,12 +45,12 @@ const AdminSidebar = () => {
               <span>Tahun Ajaran</span>
             </Link>
           </li>
-          {/* <li className={isActive('/pages/admin/kelas') ? 'active' : ''}>
+          <li className={isActive('/pages/admin/kelas') ? 'active' : ''}>
             <Link className="nav-link" href="/pages/admin/kelas">
-              <i className="ion-ios-bookmarks"></i>
+              <i className="ion-ios-grid-view"></i>
               <span>Kelas</span>
             </Link>
-          </li> */}
+          </li>
           <li className={isActive('/pages/admin/users') ? 'active' : ''}>
             <Link className="nav-link" href="/pages/admin/users">
               <i className="ion-ios-bookmarks"></i>

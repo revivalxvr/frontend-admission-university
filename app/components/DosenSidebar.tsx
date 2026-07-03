@@ -54,6 +54,21 @@ const DosenSidebar = () => {
               <span>Kartu Rencana Studi</span>
             </Link>
           </li>
+          {/* 🔄 TAMBAHAN MENU: PILIH KELAS */}
+      <li className={isActive('/pages/dosen/pilihkelas') ? 'active' : ''}>
+        <Link className="nav-link" href="/pages/dosen/pilihkelas">
+          <i className="ion-ios-grid-view"></i>
+          <span>Pilih Kelas</span>
+        </Link>
+      </li>
+
+      {/* 🔄 TAMBAHAN MENU: PILIH MATKUL */}
+      <li className={isActive('/pages/dosen/pilihmatkul') ? 'active' : ''}>
+        <Link className="nav-link" href="/pages/dosen/pilihmatkul">
+          <i className="ion-ios-bookmarks"></i>
+          <span>Pilih Matkul</span>
+        </Link>
+      </li>
           <li className="menu-header">Lainnya</li>
           <li>
             <Link className="nav-link" href="/login">

@@ -592,10 +592,18 @@ const JadwalPage = () => {
         fields={[
           {
             label: "Nama Mata Kuliah",
-            name: "name",
+            name: "courseId",
             type: "select",
             value: selectedJadwal.courseId|| "",
             options: matkulOptions,
+            onChange: (e: any) => handleInputChange(e), //panggil fungi untuk deteksi perubahan pada feld form
+          },
+          {
+            label: "Kelas",
+            name: "classId",
+            type: "select",
+            value: selectedJadwal.classId|| "",
+            options: kelasOptions,
             onChange: (e: any) => handleInputChange(e), //panggil fungi untuk deteksi perubahan pada feld form
           },
           {

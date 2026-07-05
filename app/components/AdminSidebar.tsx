@@ -51,6 +51,12 @@ const AdminSidebar = () => {
               <span>Kelas</span>
             </Link>
           </li>
+           <li className={isActive('/pages/admin/pilihkelas') ? 'active' : ''}>
+            <Link className="nav-link" href="/pages/admin/pilihkelas">
+              <i className="ion-ios-grid-view"></i>
+              <span>Pilih Kelas</span>
+            </Link>
+          </li>
           <li className={isActive('/pages/admin/users') ? 'active' : ''}>
             <Link className="nav-link" href="/pages/admin/users">
               <i className="ion-ios-bookmarks"></i>
@@ -119,6 +125,12 @@ const AdminSidebar = () => {
             <Link className="nav-link" href="/pages/admin/pembayaran">
               <i className="ion-cash"></i>
               <span>Pembayaran</span>
+            </Link>
+          </li>
+            <li className={isActive('/pages/admin/time-line') ? 'active' : ''}>
+            <Link className="nav-link" href="/pages/admin/time-line">
+              <i className="ion-cash"></i>
+              <span>Timeline</span>
             </Link>
           </li>
           <li>

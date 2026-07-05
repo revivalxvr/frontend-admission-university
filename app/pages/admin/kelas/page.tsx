@@ -297,10 +297,11 @@ if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
                     <thead>
                       <tr>
                         <th>#</th>
+                         <th>Nama Kelas</th>
                         <th>Fakultas</th>
                         <th>Program Studi</th>
                         <th>Tahun Ajaran</th>
-                        <th>Nama Kelas</th>
+                       
                         <th>Dibuat Pada</th>
                         <th>Aksi</th>
                       </tr>
@@ -309,10 +310,11 @@ if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
                       {kelasList.map((kelas, index) => (
                         <tr key={kelas.id}>
                           <td>{index + 1}</td>
+                           <td>{kelas.name}</td>
                           <td>{faculties[kelas.major?.facultyId ?? ""]}</td>
                           <td>{kelas.major?.name}</td>
                           <td>{kelas.year?.name}</td>
-                          <td>{kelas.name}</td>
+                         
                           <td>{
                             new Date (kelas.createdAt).toLocaleDateString('id-ID', {
                               day: 'numeric',
@@ -347,95 +349,6 @@ if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
                     </tbody>
                   </table>
                 </div>
-
-                {/* Modal Edit */}
-                {/* <div
-                  className="modal fade"
-                  id="editModal"
-                  tabIndex={-1}
-                  aria-labelledby="editModalLabel"
-                  aria-hidden="true"
-                >
-                  <div className="modal-dialog">
-                    <div className="modal-content">
-                      <div className="modal-header">
-                        <h5 className="modal-title" id="editModalLabel">
-                          Edit Kelas
-                        </h5>
-                        <button
-                          type="button"
-                          className="close"
-                          data-dismiss="modal"
-                          aria-label="Close"
-                        >
-                          <span aria-hidden="true">&times;</span>
-                        </button>
-                      </div>
-                      {selectedKelas && (
-                        <div className="modal-body">
-                          <div className="form-group">
-                            <label>Nama Fakultas</label>
-                            <select
-                              className="form-control"
-                              name="yearId"
-                              value={selectedKelas.yearId}
-                              onChange={handleInputChange}
-                            >
-                              {tahunAjaranList.map((year) => (
-                                <option key={year.id} value={year.id}>
-                                  {year.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="form-group">
-                            <label>Program Studi</label>
-                            <input
-                              className="form-control"
-                              name="name"
-                              value={selectedKelas.name}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                          <div className="form-group">
-                            <label>Tahun Ajaran</label>
-                            <input
-                              className="form-control"
-                              name="tahunAjaran"
-                              // value={selectedKelas.tahunAjaran}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                          <div className="form-group">
-                            <label>Nama Kelas</label>
-                            <input
-                              className="form-control"
-                              name="namaKelas"
-                              // value={selectedKelas.namaKelas}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      <div className="modal-footer">
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          data-dismiss="modal"
-                        >
-                          Tutup
-                        </button>
-                        <button
-                          // onClick={handleSave}
-                          className="btn btn-primary"
-                        >
-                          Simpan Perubahan
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div> */}
-                {/* End Modal */}
               </div>
             </div>
           </div>
@@ -493,7 +406,7 @@ if (!confirm("Apakah anda yakin ingin menghapus data ini?")) return;
                     <label>Nama Kelas</label>
                     <input
                       type="text"
-                      name="code"
+                      name="name"
                       className="form-control"
                       value={selectedKelas.name}
                       onChange={handleInputChange}

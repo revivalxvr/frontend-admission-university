@@ -439,7 +439,7 @@ const MahasiswaPage = () => {
                           name: "name",
                           type: "text", //Atur type menjadi 'text'
                           value: newMahasiswa.name,
-                          placeholder: "Masukkan Nama Prodi",
+                          placeholder: "Masukkan Nama Mahasiswa",
                           gridClass: "col-md-6",
                           onChange: (e: any) => handleNewMahasiswaChange(e),
                         },

@@ -25,23 +25,9 @@ interface Matkul {
   code: string;
   lectureId: string;
   credits: number;
-  lecture: Dosen;
   createdAt: string;
 }
-interface Dosen {
-  id: string;
-  name: string;
-  major: Prodi;
-}
-interface Prodi {
-  id: string;
-  name: string;
-  faculty: Fakultas;
-}
-interface Fakultas {
-  id: string;
-  name: string;
-}
+
 
 //API service
 const getDosen = async () => {
@@ -103,7 +89,7 @@ const MatkulPage = () => {
   const [selectedMatkul, setSelectedMatkul] = useState<Partial<Matkul>>({});
 
   const [matkulList, setMatkulList] = useState<Matkul[]>([]);
-  const [dosenList, setDosenList] = useState<Dosen[]>([]);
+ 
 
   const [newMatkul, setNewMatkul] = useState({
     name: "",
@@ -116,7 +102,7 @@ const MatkulPage = () => {
   //ambil data awal menggunakan useEffect
   useEffect(() => {
     fetchMatkul();
-    fetchDosen();
+
   }, []);
 
   const fetchMatkul = async () => {
@@ -126,17 +112,6 @@ const MatkulPage = () => {
       setMatkulList(data);
     } catch (error) {
       console.log("Gagal mengambil data matkul ==", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  const fetchDosen = async () => {
-      setLoading(true);
-    try {
-      const data = await getDosen();
-      setDosenList(data);
-    } catch (error) {
-      console.log("Gagal mengambil data dosen ==", error);
     } finally {
       setLoading(false);
     }
@@ -214,7 +189,7 @@ const MatkulPage = () => {
       setLoading(true);
     try {
       await deleteMatkul(id);
-      setDosenList((prev) => prev.filter((dosen) => dosen.id !== id));
+      setMatkulList((prev) => prev.filter((matkul) => matkul.id !== id));
       showToast("successfully", "success");
       fetchMatkul();
     } catch (error: any) {
@@ -250,18 +225,6 @@ const MatkulPage = () => {
       {
         accessorKey: "code",
         header: "Kode Mata Kuliah",
-      },
-      {
-        accessorKey: "lecture.major.faculty.name",
-        header: "Fakultas",
-      },
-      {
-        accessorKey: "lecture.major.name",
-        header: "Program Studi",
-      },
-      {
-        accessorKey: "lecture.name",
-        header: "Dosen",
       },
       {
         accessorKey: "credits",
@@ -327,10 +290,7 @@ const MatkulPage = () => {
     onPaginationChange: setPagination,
     onGlobalFilterChange: setGlobalFilter,
   });
-  const donsenOptions = dosenList.map((dosen) => ({
-    value: dosen.id,
-    label: `${dosen.name} - (${dosen.major.faculty.name})`,
-  }));
+
   return (
     <section className="section">
       <div className="section-header">
@@ -395,15 +355,6 @@ const MatkulPage = () => {
                           gridClass: "col-md-6",
                           onChange: (e: any) => handleNewChange(e),
                         },
-                        {
-                          label: "Dosen",
-                          name: "lectureId",
-                          type: "select",
-                          value: newMatkul.lectureId,
-                          options: donsenOptions,
-                          gridClass: "col-md-6",
-                          onChange: (e: any) => handleNewChange(e),
-                        }
                           
                       ]}
                     />
@@ -449,14 +400,6 @@ const MatkulPage = () => {
             placeholder: "Masukkan Code Mata Kuliah",
             onChange: (e: any) => handleInputChange(e),
           },
-          {
-            label: "Dosen",
-            name: "lectureId",
-            type: "select",
-            value: selectedMatkul.lectureId || "",
-            options: donsenOptions,
-            onChange: (e: any) => handleInputChange(e),
-          }
         ]}
       />
        <ModalConfirmDelete

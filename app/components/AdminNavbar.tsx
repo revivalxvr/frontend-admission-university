@@ -44,7 +44,7 @@ const AdminNavbar = () => {
     Object.keys(Cookies.get()).forEach(cookie => {
       Cookies.remove(cookie);
     });
-    router.push("/pages/auth/dosen/login");
+    router.push("/pages/auth/admin/login");
   }
   return (
     <nav className="navbar navbar-expand-lg main-navbar">

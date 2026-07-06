@@ -146,7 +146,7 @@ const PembayaranPage = () => {
                         <th>Kode Pembayaran</th>
                         <th>Golongan</th>
                         <th>Tahun Ajaran</th>
-                        <th>Semester</th>
+                 
                         <th>Status</th>
                         <th>Dibuat Pada</th>
                         <th>Aksi</th>
@@ -161,7 +161,7 @@ const PembayaranPage = () => {
                           <td>{p.code ?? "-"}</td>
                           <td>{p.student?.tfGroup?.group ?? "-"}</td>
                           <td>{p.student?.class?.year?.name ?? "-"}</td>
-                          <td>{p.student?.semester ?? "-"}</td>
+                   
                           <td>
                             <span
                               className={`badge badge-${

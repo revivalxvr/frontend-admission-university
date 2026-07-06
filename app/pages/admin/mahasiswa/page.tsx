@@ -25,23 +25,23 @@ interface Mahasiswa {
   name: string;
   email: string;
   studentNumber: string;
-  semester: number;
+  lectureId: string;
   classOf: number;
   tfGroupId: string;
   tfGroup?: GolUkt;
   classId: string;
   class?: Kelas;
+  advisor?: Dosen;
   createdAt: string;
 }
-
-interface Fakultas {
+interface Dosen {
   id: string;
   name: string;
+  email: string;
 }
 interface Prodi {
   id: string;
   name: string;
-  faculty: Fakultas;
 }
 interface GolUkt {
   id: string;
@@ -66,10 +66,14 @@ const getMahasiswa = async () => {
   const res = await api.get("/students");
   return res.data.data;
 };
+const getDosen = async () => {
+  const res = await api.get("/lecture");
+  return res.data.data;
+}
 const addMahasiswa = async (data: {
   name: string;
   email: string;
-  semester: number;
+  lectureId: string;
   classOf: number;
   tfGroupId: string;
   classId: string;
@@ -82,7 +86,7 @@ const updateMahasiswa = async (
   data: {
     name: string;
     email: string;
-    semester: number;
+    lectureId: string;
     classOf: number;
     tfGroupId: string;
     classId: string;
@@ -120,7 +124,7 @@ const MahasiswaPage = () => {
   const [newMahasiswa, setNewMahasiswa] = useState({
     name: "",
     email: "",
-    semester: 0,
+    lectureId: "",
     classOf: 0,
     tfGroupId: "",
     classId: "",
@@ -128,6 +132,7 @@ const MahasiswaPage = () => {
   const [mahasiswaList, setMahasiswaList] = useState<Mahasiswa[]>([]);
   const [golUktList, setGolUktList] = useState<GolUkt[]>([]);
   const [kelasList, setKelasList] = useState<Kelas[]>([]);
+  const [dosenList, setDosenList] = useState<Dosen[]>([]);
 
   const fetchMahasiswa = async () => {
     setLoading(true);
@@ -162,11 +167,23 @@ const MahasiswaPage = () => {
       setLoading(false); // matikan loading spinner
     }
   };
+  const fetchDosen = async () => {
+    setLoading(true);
+    try {
+      const data = await getDosen();
+      setDosenList(data);
+    } catch (error) {
+      console.error("Error fetching dosen:", error);
+    } finally {
+      setLoading(false); // matikan loading spinner
+    }
+  };
   //ambil data awal
   useEffect(() => {
     fetchMahasiswa();
     fetchGolUkt();
     fetchKelas();
+    fetchDosen();
   }, []);
 
   const openEditModal = (mahasiswa: Mahasiswa) => {
@@ -204,7 +221,7 @@ const MahasiswaPage = () => {
       const updated = await updateMahasiswa(selectedMahasiswa.id, {
         name: selectedMahasiswa.name ?? "",
         email: selectedMahasiswa.email ?? "",
-        semester: selectedMahasiswa.semester ?? 0,
+        lectureId: selectedMahasiswa.lectureId ?? "",
         classOf: selectedMahasiswa.classOf ?? 0,
         tfGroupId: selectedMahasiswa.tfGroupId ?? "",
         classId: selectedMahasiswa.classId ?? "",
@@ -232,10 +249,10 @@ const MahasiswaPage = () => {
       setNewMahasiswa({
         name: "",
         email: "",
-        semester: 0,
         classOf: 0,
         tfGroupId: "",
         classId: "",
+        lectureId: "",
       });
       showToast("successfully", "success");
       fetchMahasiswa();
@@ -294,19 +311,24 @@ const MahasiswaPage = () => {
           accessorKey: "email",
           header: "Email",
         },
-         {
-          accessorFn:(row) => row.class?.major?.faculty?.name || "-",
-          id:"facultyName",
-          header: "Fakultas",
-        },
         {
           accessorFn:(row) => row.class?.major?.name || "-",
           id:"majorName",
           header: "Prodi",
         },
+        {
+          id: "kelas",
+          header: "Kelas",
+          accessorFn: (row) => row.class?.name || "-",
+        },
           {
           accessorKey: "studentNumber",
           header: "NIM",
+        },
+        {
+          id: "advisor",
+          header: "Dosen Wali",
+          accessorFn: (row) => row.advisor?.name || "-",
         },
         {
           accessorFn:(row) => row.tfGroup?.group || "-",
@@ -317,11 +339,6 @@ const MahasiswaPage = () => {
           accessorFn:(row) => row.class?.name || "-",
           id:"className",
           header: "Kelas",
-        },
-      
-         {
-          accessorKey: "semester",
-          header: "Semester",
         },
          {
           accessorKey: "classOf",
@@ -395,6 +412,10 @@ const MahasiswaPage = () => {
       value: kelas.id,
       label: `${kelas.name} (${kelas.major?.name || ""})`,
       }));
+    const dosenOptions = dosenList.map((dosen) => ({
+      value: dosen.id,
+      label: dosen.name,
+    }));
   
   return (
     <section className="section">
@@ -453,13 +474,12 @@ const MahasiswaPage = () => {
                          onChange: (e: any) => handleNewMahasiswaChange(e),
                         },
                         {
-                          
-                          label: "Semester",
-                          name: "semester",
-                          type: "number",
-                          value: newMahasiswa.semester,
-                          placeholder: "Masukkan Semester",
-                          gridClass: "col-md-3",
+                          label: "Pilih Dosen Wali",
+                          name: "lectureId",
+                          type: "select", //Atur type menjadi 'select'
+                          value: newMahasiswa.lectureId,
+                          options: dosenOptions,
+                          gridClass: "col-md-6",
                           onChange: (e: any) => handleNewMahasiswaChange(e),
                         },
                          {
@@ -531,14 +551,6 @@ const MahasiswaPage = () => {
                         placeholder: "Masukkan Email Mahasiswa",
                         onChange: (e: any) => handleInputChange(e)
                       },
-                      {
-                        label: "Semester",
-                        name: "semester",
-                        type: "number",
-                        value: selectedMahasiswa?.semester || "",
-                        placeholder: "Masukkan Semester Mahasiswa",
-                        onChange: (e: any) => handleInputChange(e)
-                      },
                        {
                         label: "Angkatan",
                         name: "classOf",
@@ -583,7 +595,6 @@ const MahasiswaPage = () => {
           </div>
         </div>
       </div>
-
       
     </section>
   );

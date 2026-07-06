@@ -8,7 +8,7 @@ interface Khs {
   studentName: string;
   studentNumber: string;
   studentYearName: string;
-  studentSemester: number;
+
   status: string;
   gpa: number;
   createdAt: string;
@@ -83,7 +83,7 @@ const KHSPage = () => {
                         <th>Nama</th>
                         <th>NIM</th>
                         <th>Tahun Ajaran</th>
-                        <th>Semester</th>
+                       
                         <th>GPA</th>
                         <th>Dibuat pada</th>
                         <th>Aksi</th>
@@ -96,7 +96,7 @@ const KHSPage = () => {
                           <td>{khs.studentName}</td>
                           <td>{khs.studentNumber}</td>
                           <td>{khs.studentYearName}</td>
-                          <td>{khs.studentSemester}</td>
+                         
                           <td>{khs.gpa}</td>
                           <td>
                             {new Date(khs.createdAt).toLocaleString("id-ID", {
@@ -158,9 +158,7 @@ const KHSPage = () => {
                     <strong>Tahun Ajaran :</strong>{" "}
                     {selectedKhs.studentYearName}
                   </p>
-                  <p>
-                    <strong>Semester :</strong> {selectedKhs.studentSemester}
-                  </p>
+                  
 
                   <div className="table-responsive">
                     <table className="table table-bordered">

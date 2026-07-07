@@ -10,6 +10,7 @@ interface DetailModalProps {
   contentId: string;
   onClose: () => void;
   children: React.ReactNode;
+  lecturerName: string;
 }
 
 interface Krs {
@@ -52,6 +53,7 @@ export const DetailModal: React.FC<DetailModalProps> = ({
   contentId,
   onClose,
   children,
+  lecturerName,
 }) => {
   if (!isOpen) return null;
 

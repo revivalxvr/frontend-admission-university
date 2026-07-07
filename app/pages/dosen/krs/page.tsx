@@ -28,7 +28,7 @@ interface ApiCourse {
 
 interface ApiStudyPlan {
   id: string;
-  name: string;
+  studentName: string;
   studentNumber: string;
   yearName: string;
   status: string;
@@ -42,7 +42,7 @@ interface ApiKrs {
 
 interface Krs {
   id: string;
-  name: string;
+  studentName: string;
   studentNumber: string;
   studentYearName: string;
   status: string;
@@ -112,7 +112,7 @@ const KRSPage = () => {
       // mapping supaya sesuai interface Krs
       const mappedData: Krs[] = data.map((item: ApiKrs) => ({
         id: item.studyPlan.id,
-        name: item.studyPlan.name,
+        studentName: item.studyPlan.studentName,
         studentNumber: item.studyPlan.studentNumber,
         studentYearName: item.studyPlan.yearName,
         status: item.studyPlan.status,
@@ -127,7 +127,7 @@ const KRSPage = () => {
       }));
 
       const sortedData = mappedData.sort((a, b) =>
-        a.name.localeCompare(b.name, "id", { sensitivity: "base" }),
+        a.studentName.localeCompare(b.studentName, "id", { sensitivity: "base" }),
       );
 
       setKrsList(sortedData);
@@ -165,7 +165,7 @@ const columns = useMemo<ColumnDef<Krs>[]>(
       accessorFn: (row, index) => index + 1,
       header: "#",
     },
-    { accessorKey: "name", header: "Nama Mahasiswa" },
+    { accessorKey: "studentName", header: "Nama Mahasiswa" },
     { accessorKey: "studentNumber", header: "NIM" },
     { accessorKey: "studentYearName", header: "Tahun Ajaran" },
     {
@@ -313,7 +313,8 @@ const columns = useMemo<ColumnDef<Krs>[]>(
       <DetailModal
         isOpen={isDetailModalOpen && !!selectedKrs}
         title="Detail Kartu Rencana Studi"
-        studentName={selectedKrs.name ?? ""}
+        studentName={selectedKrs.studentName ?? ""}
+        lecturerName={selectedKrs.courses?.[0]?.lectureName ?? "-"}
         contentId="krsContent"
         onClose={closeDetailModal}
       >

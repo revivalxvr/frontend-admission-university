@@ -17,7 +17,7 @@ interface Dosen {
   id: string;
   name: string;
   majorName: string;
-  faculty: string;
+  facultyName: string;
   courses: Matkul[];
 }
 
@@ -54,11 +54,6 @@ const MatkulDashboard = () => {
     setLoading(true);
     try {
       const data = await getMatkul();
-      // const sortedData = data.sort((a: Matkul, b: Matkul) =>
-      //   a.name.localeCompare(b.name, "id", {
-      //     sensitivity: "base",
-      //   })
-      // );
       setDosen(data);
     } catch (err) {
       console.error("Gagal fetch mahasiswa:", err);
@@ -130,14 +125,9 @@ const MatkulDashboard = () => {
                         : Matkul.classId
                     }
                     title={Matkul.name}
-                    fakultas={dosen?.faculty ?? ""}
+                    fakultas={dosen?.facultyName ?? ""}
                     prodi={dosen?.majorName ?? ""}
                     sks={Matkul.credits}
-                    semester={
-                      Array.isArray(Matkul.semesters)
-                        ? Matkul.semesters.join(", ")
-                        : Matkul.semesters
-                    }
                     classNames={
                       Array.isArray(Matkul.classes)
                         ? Matkul.classes.join(", ")

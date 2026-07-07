@@ -8,7 +8,7 @@ interface MataKuliahProps {
   fakultas: string;
   prodi: string;
   sks: number;
-  semester: number | string;
+
   classNames: string | string[];
   onEdit?: () => void;
   onDelete?: () => void;
@@ -21,7 +21,6 @@ const MataKuliahCard: React.FC<MataKuliahProps> = ({
   fakultas,
   prodi,
   sks,
-  semester,
   classNames,
   onEdit,
   onDelete,
@@ -103,12 +102,6 @@ const MataKuliahCard: React.FC<MataKuliahProps> = ({
               <td>SKS</td>
               <td>
                 <strong>{sks}</strong>
-              </td>
-            </tr>
-            <tr>
-              <td>Semester</td>
-              <td>
-                <strong>{renderValue(semester)}</strong>
               </td>
             </tr>
             <tr>

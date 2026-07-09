@@ -3,8 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Cookies from "js-cookie";
+import { useRouter } from "next/navigation";
 
 const DosenSidebar = () => {
+  const router = useRouter();
   const pathname = usePathname();
 
   const isActive = (href: string) => {
@@ -18,7 +21,25 @@ const DosenSidebar = () => {
       pathname.startsWith('/pages/dosen/pilihmatkul')
     );
   };
+const handleLogout = (e : any) => {
+  // 1. Cegah perilaku default dari tag <Link> agar tidak memotong proses JavaScript
+  if (e) e.preventDefault();
 
+  // 2. Ambil semua cookie yang ada
+  const allCookies = Cookies.get();
+
+  // 3. Hapus semua cookie, pastikan berikan opsi path jika diperlukan
+  Object.keys(allCookies).forEach(cookieName => {
+    // Hapus standar
+    Cookies.remove(cookieName);
+    
+    // Hapus dengan path root
+    Cookies.remove(cookieName, { path: '/' }); 
+  });
+
+  // 4. Pindahkan halaman setelah cookie dipastikan bersih
+  router.push("/pages/auth/dosen/login");
+};
 
   return (
     <div className="main-sidebar sidebar-style-2">
@@ -55,12 +76,12 @@ const DosenSidebar = () => {
             </Link>
           </li>
           {/* 🔄 TAMBAHAN MENU: PILIH KELAS */}
-      <li className={isActive('/pages/dosen/pilihkelas') ? 'active' : ''}>
+      {/* <li className={isActive('/pages/dosen/pilihkelas') ? 'active' : ''}>
         <Link className="nav-link" href="/pages/dosen/pilihkelas">
           <i className="ion-ios-grid-view"></i>
           <span>Pilih Kelas</span>
         </Link>
-      </li>
+      </li> */}
 
       {/* 🔄 TAMBAHAN MENU: PILIH MATKUL */}
       <li className={isActive('/pages/dosen/pilihmatkul') ? 'active' : ''}>
@@ -71,11 +92,11 @@ const DosenSidebar = () => {
       </li>
           <li className="menu-header">Lainnya</li>
           <li>
-            <Link className="nav-link" href="/login">
-              <i className="ion-arrow-return-left"></i>
-              <span>Logout</span>
-            </Link>
-          </li>
+  <Link className="nav-link" href="#" onClick={handleLogout}>
+    <i className="ion-arrow-return-left"></i>
+    <span>Logout</span>
+  </Link>
+</li>
         </ul>
       </aside>
     </div>

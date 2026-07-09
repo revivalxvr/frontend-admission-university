@@ -13,7 +13,7 @@ interface DetailModalProps {
   lecturerName: string;
 }
 
-interface Krs {
+export interface Krs {
   name?: string;
   studentName?: string;
   studentNumber?: number | string;
@@ -29,7 +29,7 @@ interface Course {
   lectureName: string;
 }
 
-interface KhsCourse {
+export interface KhsCourse {
   id: string | number;
   courseCode: string;
   courseName: string;
@@ -37,11 +37,10 @@ interface KhsCourse {
   courseScore: number;
 }
 
-interface Khs {
+export interface Khs {
   studentName?: string;
   studentNumber?: string | number;
   studentYearName?: string;
-  studentSemester?: string | number;
   courses?: KhsCourse[];
   gpa?: number;
 }
@@ -185,9 +184,7 @@ export const renderTableKhs = (
     <p>
       <strong>Tahun Ajaran :</strong> {khs.studentYearName}
     </p>
-    <p>
-      <strong>Semester :</strong> {khs.studentSemester}
-    </p>
+   
 
     <div className="table-responsive">
       <table className="table table-bordered">

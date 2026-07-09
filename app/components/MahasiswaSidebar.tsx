@@ -30,7 +30,7 @@ const MahasiswaSidebar = () => {
     });
 
     // 4. Pindahkan halaman setelah cookie dipastikan bersih
-    router.push("/pages/auth/dosen/login");
+    router.push("/pages/auth/mahasiswa/login");
   };
   return (
     <div className="main-sidebar sidebar-style-2">

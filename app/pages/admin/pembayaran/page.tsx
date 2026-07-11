@@ -165,9 +165,9 @@ const PembayaranPage = () => {
                           <td>
                             <span
                               className={`badge badge-${
-                                p.status.toUpperCase() === "LUNAS"
+                                p.status.toUpperCase() === "PAID"
                                   ? "success"
-                                  : p.status.toUpperCase() === "BELUM LUNAS"
+                                  : p.status.toUpperCase() === "UNPAID"
                                     ? "danger"
                                     : p.status.toUpperCase() === "PENDING"
                                       ? "warning"
@@ -286,20 +286,20 @@ const PembayaranPage = () => {
                         type="checkbox"
                         name="status"
                         className="custom-switch-input"
-                        checked={selectedPembayaran.status === "Lunas"}
+                        checked={selectedPembayaran.status === "PAID"}
                         onChange={(e) =>
                           setSelectedPembayaran((prev) => ({
                             ...prev,
-                            status: e.target.checked ? "Lunas" : "Belum Lunas",
+                            status: e.target.checked ? "PAID" : "UNPAID",
                           }))
                         }
                       />
                       <span className="custom-switch-indicator"></span>
                       <span className="custom-switch-description font-weight-bold">
-                        {selectedPembayaran.status === "Lunas" ? (
-                          <span className="text-success">Lunas</span>
+                        {selectedPembayaran.status === "PAID" ? (
+                          <span className="text-success">PAID</span>
                         ) : (
-                          <span className="text-danger">Belum Lunas</span>
+                          <span className="text-danger">UNPAID</span>
                         )}
                       </span>
                     </label>

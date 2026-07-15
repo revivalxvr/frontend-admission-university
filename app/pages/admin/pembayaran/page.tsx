@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 // import MyBarChart from '../../../components/myBarChart';
 import api from "@/app/lib/axiosInstance";
+import AddForm from "@/app/components/form/AddForm";
 
 interface Pembayaran {
   id: string;
@@ -70,11 +71,12 @@ const PembayaranPage = () => {
   const [pembayaranList, setPembayaranList] = useState<Pembayaran[]>([]);
   const [mahasiswaList, setMahasiswaList] = useState<Mahasiswa[]>([]);
 
-  const [newPembayaran, setNewPembayaran] = useState({
-    code: "",
-    status: "",
-    studentId: "",
-  });
+  const initialPembayaranState = {
+  studentId: "",
+  code: "",
+  status: "",
+  };
+  const [newPembayaran, setNewPembayaran] = useState(initialPembayaranState);
   //end of state
 
   //tampilkan data awal using seEffect
@@ -109,22 +111,55 @@ const PembayaranPage = () => {
     setIsEditModalOpen(false);
   };
   const handleSaveUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      if (!selectedPembayaran.id) return;
-      try {
-        const updated = await updatePembayaran(selectedPembayaran.id, {
-          status: selectedPembayaran.status ?? '',
-        });
-        setPembayaranList((prev) =>
-          prev.map((pembayaran) => (pembayaran.id === updated.id ? updated : pembayaran)),
-        );
-        closeEditModal();
-        fetchPembayaran();
-      } catch (error) {
-        console.log ("Gagal menyimpan perubahan pembayaran ==",error);
-      }
+    e.preventDefault();
+    if (!selectedPembayaran.id) return;
+    try {
+      const updated = await updatePembayaran(selectedPembayaran.id, {
+        status: selectedPembayaran.status ?? "",
+      });
+      setPembayaranList((prev) =>
+        prev.map((pembayaran) =>
+          pembayaran.id === updated.id ? updated : pembayaran,
+        ),
+      );
+      closeEditModal();
+      fetchPembayaran();
+    } catch (error) {
+      console.log("Gagal menyimpan perubahan pembayaran ==", error);
+    }
   };
- 
+  const handleAddNewPay = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+       await addPembayaran({
+        code: newPembayaran.code,
+        status: newPembayaran.status,
+        studentId: newPembayaran.studentId,
+      });
+      setNewPembayaran(initialPembayaranState);
+      closeEditModal();
+      fetchPembayaran();
+    } catch (error) {
+      console.error("Error adding pembayaran:", error);
+    }
+  };
+
+  const studentOptions = mahasiswaList.map((m) => ({
+    value: m.id,
+    label: m.name,
+  }));
+  const statusOptions = [
+    { value: "PAID", label: "PAID" },
+    { value: "UNPAID", label: "UNPAID" },
+  ];
+
+  const handleNewChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    setNewPembayaran((prev) => ({ ...prev, [name]: value }));
+  };
+
   return (
     <section className="section">
       <div className="section-header">
@@ -136,6 +171,53 @@ const PembayaranPage = () => {
           <div className="col-12">
             <div className="card">
               <div className="card-body">
+                <button
+                  className="btn btn-primary btn-sm footer-left mb-2"
+                  type="button"
+                  data-toggle="collapse"
+                  data-target="#collapseEditMatkul"
+                >
+                  Tambah Mata Kuliah
+                </button>
+                <div className="collapse" id="collapseEditMatkul">
+                  <div className="card card-body">
+                    <AddForm
+                      onSubmit={handleAddNewPay}
+                      collapseTargetId="collapseEditMatkul"
+                      submitText="Simpan"
+                      cancelText="Batal"
+                      fields={[
+                        {
+                          label: "Mahasiswa",
+                          name: "studentId",
+                          type: "select", //Atur type menjadi 'text'
+                          value: newPembayaran.studentId,
+                          options: studentOptions,
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewChange(e),
+                        },
+                        {
+                          label: "Kode Pembayaran",
+                          name: "code",
+                          type: "text",
+                          value: newPembayaran.code,
+                          placeholder: "Masukkan Kode Pembayaran",
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewChange(e),
+                        },
+                        {
+                          label: "Status Pembayaran",
+                          name: "status",
+                          type: "select",
+                          value: newPembayaran.status,
+                          options: statusOptions,
+                          gridClass: "col-md-6",
+                          onChange: (e: any) => handleNewChange(e),
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
                 <div className="table-responsive">
                   <table className="table table-striped" id="table-1">
                     <thead>
@@ -146,7 +228,6 @@ const PembayaranPage = () => {
                         <th>Kode Pembayaran</th>
                         <th>Golongan</th>
                         <th>Tahun Ajaran</th>
-                 
                         <th>Status</th>
                         <th>Dibuat Pada</th>
                         <th>Aksi</th>
@@ -161,20 +242,19 @@ const PembayaranPage = () => {
                           <td>{p.code ?? "-"}</td>
                           <td>{p.student?.tfGroup?.group ?? "-"}</td>
                           <td>{p.student?.class?.year?.name ?? "-"}</td>
-                   
                           <td>
                             <span
                               className={`badge badge-${
-                                p.status.toUpperCase() === "PAID"
+                                p.status === "PAID"
                                   ? "success"
-                                  : p.status.toUpperCase() === "UNPAID"
+                                  : p.status === "UNPAID"
                                     ? "danger"
-                                    : p.status.toUpperCase() === "PENDING"
+                                    : p.status === "PENDING"
                                       ? "warning"
-                                      : "secondary" // <-- Warna cadangan (abu-abu) jika status tidak cocok dengan ketiganya
+                                      : "secondary"
                               }`}
                             >
-                              {p.status}
+                              {p.status ?? "UNPAID"}
                             </span>
                           </td>
                           <td>

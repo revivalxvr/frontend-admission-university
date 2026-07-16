@@ -114,14 +114,14 @@ const MahasiswaPembayaran = () => {
       const res = await api.post("/payment/create-token", data);
       const responseData = res.data;
           // console.log({responseData});
-      window.snap.pay(responseData.token);
+      (window as any).snap?.pay(responseData.token);
     } catch (error: any) {
       console.error("Error saat memproses pembayaran:", error);
       alert(error.response?.data?.message || "Terjadi kesalahan pada server.");
     }
   };
 
-  const unpaidList = pembayaranList.filter((p) => p.status === "UNPAID");
+  const unpaidList = pembayaranList.filter((p) => p.status === "UNPAID" || p.status === "PENDING");
   const paidList = pembayaranList.filter((p) => p.status === "PAID");
 
   return (
@@ -218,10 +218,12 @@ const MahasiswaPembayaran = () => {
                         <thead>
                           <tr>
                             <th>#</th>
+                            <th>Nama</th>
+                            <th>Email</th>
+                            <th>Total Tagihan</th>
                             <th>Kode Pembayaran</th>
                             <th>Golongan</th>
                             <th>Tahun Ajaran</th>
-
                             <th>Status</th>
                             <th>Dibuat Pada</th>
                           </tr>
@@ -231,6 +233,17 @@ const MahasiswaPembayaran = () => {
                             paidList.map((p, idx) => (
                               <tr key={p.id}>
                                 <td>{idx + 1}</td>
+                                <td>{p.student.name}</td>
+                                <td>{p.student.email}</td>
+                                <td>
+                                    {new Intl.NumberFormat("id-ID", {
+                                      style: "currency",
+                                      currency: "IDR",
+                                      minimumFractionDigits: 0,
+                                    }).format(
+                                      p.student.tfGroup.amount,
+                                    )}
+                                  </td>
                                 <td>{p.code}</td>
                                 <td>{p.student.tfGroup.group}</td>
                                 <td>2025/2026</td>

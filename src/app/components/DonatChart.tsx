@@ -16,8 +16,8 @@ import {
   AvailableChartColors,
   getColorClassName,
   type AvailableChartColorsKeys,
-} from "@/src/app/lib/chartUtils"
-import { cx } from "@/src/app/lib/utils"
+} from "../../lib/chartUtils"
+import { cx } from "@/src/lib/utils"
 export const constructCategoryColors = (
   categories: string[],
   colors: AvailableChartColorsKeys[] = [],

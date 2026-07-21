@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation';
-import api from "@/src/app/lib/axiosInstance";
+import api from "@/src/lib/axiosInstance";
 
 export default function RegisterPage() {
      const router = useRouter();

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 // import MyBarChart from '../../../components/myBarChart';
-import api from "@/src/app/lib/axiosInstance";
+import api from "@/src/lib/axiosInstance";
 import AddForm from "@/src/app/components/form/AddForm";
 
 interface Pembayaran {

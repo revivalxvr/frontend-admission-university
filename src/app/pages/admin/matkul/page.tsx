@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 
-import api from "@/src/app/lib/axiosInstance";
+import api from "@/src/lib/axiosInstance";
 import {
   ColumnDef,
   getSortedRowModel,

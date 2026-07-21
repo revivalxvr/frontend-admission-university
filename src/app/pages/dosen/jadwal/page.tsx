@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import api from "@/src/app/lib/axiosInstance";
+import api from "@/src/lib/axiosInstance";
 import ScheduleCalendar from "@/src/app/components/ScheduleCalendar";
 import { BarLoader } from "react-spinners";
 

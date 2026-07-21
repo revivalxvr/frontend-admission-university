@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import api from "@/src/app/lib/axiosInstance";
+import api from "@/src/lib/axiosInstance";
 import MataKuliahCard from "@/src/app/components/card/MatkulCard";
 import { BarLoader } from "react-spinners";
 

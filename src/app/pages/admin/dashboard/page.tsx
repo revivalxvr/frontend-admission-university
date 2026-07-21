@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { DonutChart, DonutChartEventProps } from "@/src/app/components/card/DonatChart";
+import { DonutChart, DonutChartEventProps } from "@/src/app/components/DonatChart";
 
 // 
 const chartdata = [

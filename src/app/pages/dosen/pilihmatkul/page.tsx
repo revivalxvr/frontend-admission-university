@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link'; // Menggunakan Link bawaan Next.js agar navigasi lebih cepat
-import api from '@/src/app/lib/axiosInstance';
+import api from '@/src/lib/axiosInstance';
 
 // Interface untuk detail item Jadwal Kuliah (Schedules)
 export interface ScheduleDetail {

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/src/app/lib/axiosInstance";
+import api from "@/src/lib/axiosInstance";
 import Link from "next/link";
 
 export default function RegisterPage() {

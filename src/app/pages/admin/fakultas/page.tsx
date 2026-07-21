@@ -1,5 +1,5 @@
 "use client";
-import api from "@/src/app/lib/axiosInstance";
+import api from "@/src/lib/axiosInstance";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   ColumnDef,

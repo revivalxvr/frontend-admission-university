@@ -1,7 +1,7 @@
 "use client";
 import React from "react"
 
-import { DonutChart, TooltipProps } from "@/src/app/components/card/DonatChart";
+import { DonutChart, TooltipProps } from "@/src/app/components/DonatChart"
 
 interface DataItem {
   name: string

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import api from "@/src/app/lib/axiosInstance";
+import api from "@/src/lib/axiosInstance";
 
 interface Pembayaran {
   id: string;

@@ -3,6 +3,7 @@ import AdminNavbar from '../../components/AdminNavbar';
 import AdminSidebar from '../../components/AdminSidebar';
 import { ToastProvider } from '@/src/app/components/context/ToastContext'; 
 
+
 export const metadata = {
   title: "Dashboard Admin",
 };

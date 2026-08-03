@@ -1,4 +1,5 @@
 @charset "UTF-8";
+
 /**
  * Components
  *
@@ -2085,5 +2086,3 @@ tr:first-child > td > .fc-day-grid-event {
     margin-bottom: 50px;
   }
 }
-
-/*# sourceMappingURL=components.css.map */
